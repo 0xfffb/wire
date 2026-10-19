@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { passwords } from "@/auth/passwords";
 import { sessionStore } from "@/auth/sessions";
+import { turnstile } from "@/auth/turnstile";
 import { brokerConnections } from "@/broker/connections";
 import { oauthClientStore } from "@/broker/oauth-clients";
 import { brokerRegistry } from "@/broker/registry";
@@ -20,9 +21,16 @@ const credentials = z.object({
 });
 
 const registerSchema = credentials.extend({
-  handle: z.string().regex(/^[a-z0-9_]{3,20}$/),
-  displayName: z.string().trim().min(1).max(40),
+  username: z.string().regex(/^[a-z0-9_]{3,20}$/),
 });
+
+export type AuthFormState = { error: string };
+
+async function captchaOk(formData: FormData) {
+  const headerStore = await headers();
+  const ip = headerStore.get("cf-connecting-ip") || headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || "";
+  return turnstile.verify(String(formData.get("cf-turnstile-response") ?? ""), ip);
+}
 
 async function requireUser() {
   const user = await sessionStore.currentUser();
@@ -30,39 +38,41 @@ async function requireUser() {
   return user;
 }
 
-export async function registerAction(formData: FormData) {
+export async function registerAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  if (!(await captchaOk(formData))) return { error: "请完成验证码。" };
   const parsed = registerSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
-    handle: formData.get("handle"),
-    displayName: formData.get("displayName"),
+    username: formData.get("username"),
   });
-  if (!parsed.success) redirect("/login?error=register");
+  if (!parsed.success) return { error: "请检查注册信息。用户名使用 3 到 20 位小写字母、数字或下划线。" };
   const db = Database.current();
   const email = parsed.data.email.toLowerCase();
+  const username = parsed.data.username;
   const existing = db.select().from(users).where(eq(users.email, email)).get();
-  const handleTaken = db.select().from(publisherProfiles).where(eq(publisherProfiles.handle, parsed.data.handle)).get();
-  if (existing || handleTaken) redirect("/login?error=taken");
+  const handleTaken = db.select().from(publisherProfiles).where(eq(publisherProfiles.handle, username)).get();
+  if (existing || handleTaken) return { error: "邮箱或用户名已被使用。" };
   const { hash, salt } = await passwords.hash(parsed.data.password);
   const userId = crypto.randomUUID();
   db.insert(users).values({ id: userId, email, passwordHash: hash, passwordSalt: salt, createdAt: Date.now() }).run();
   db.insert(publisherProfiles)
-    .values({ userId, handle: parsed.data.handle, displayName: parsed.data.displayName, bio: "" })
+    .values({ userId, handle: username, displayName: username, bio: "" })
     .run();
   db.insert(sharePolicies).values({ userId, audience: "public", showCost: 0, showFillPrice: 0, showFillQty: 0, delayMinutes: 0 }).run();
   await sessionStore.create(userId);
   redirect("/publisher");
 }
 
-export async function loginAction(formData: FormData) {
+export async function loginAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  if (!(await captchaOk(formData))) return { error: "请完成验证码。" };
   const parsed = credentials.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
   });
-  if (!parsed.success) redirect("/login?error=login");
+  if (!parsed.success) return { error: "邮箱或密码不正确。" };
   const user = Database.current().select().from(users).where(eq(users.email, parsed.data.email.toLowerCase())).get();
   if (!user || !(await passwords.verify(parsed.data.password, user.passwordSalt, user.passwordHash))) {
-    redirect("/login?error=login");
+    return { error: "邮箱或密码不正确。" };
   }
   await sessionStore.create(user.id);
   redirect("/publisher");

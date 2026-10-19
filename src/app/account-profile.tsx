@@ -83,7 +83,7 @@ export function AccountProfile({
       <section className="mt-4 rounded-2xl border border-black/10 bg-white p-6">
         <div className="flex items-baseline justify-between">
           <h2 className="text-lg font-semibold">收益率曲线</h2>
-          <span className="text-xs text-[#666]">持仓成本收益率，按月合成 K 线</span>
+          <span className="text-xs text-[#666]">持仓成本收益率，近一年</span>
         </div>
         <div className="mt-4">
           <ReturnChart points={curve} height={160} />
