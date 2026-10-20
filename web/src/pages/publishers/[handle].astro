@@ -1,0 +1,13 @@
+---
+import Base from "../../layouts/Base.astro";
+
+export function getStaticPaths() {
+  return [{ params: { handle: "demo" } }];
+}
+
+const { handle } = Astro.params;
+---
+<Base title={`${handle} · Wire`} description={`发布者 ${handle} 的公开主页`}>
+  <h1>@{handle}</h1>
+  <p>发布者公开主页占位（SEO / OG 在此扩展）。</p>
+</Base>

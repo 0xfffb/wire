@@ -3,28 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "web"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "dev": "wrangler dev",
+    "dev:web": "npm run dev -w @wire/web",
+    "build:web": "npm run build -w @wire/web",
+    "deploy": "npm run build:web && wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "wrangler types"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.3.3",
-    "@types/node": "^24.0.0",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "postcss": "^8.5.31",
-    "tailwindcss": "^4.3.3",
-    "tsx": "^4.20.0",
-    "typescript": "^5.9.0"
+    "@cloudflare/workers-types": "^5.20261019.1",
+    "typescript": "^5.9.0",
+    "wrangler": "^4.151.2"
   },
   "dependencies": {
-    "drizzle-orm": "^1.0.0-rc.4",
-    "echarts": "^6.1.0",
-    "next": "^16.4.2",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1",
+    "hono": "^4.13.13",
     "zod": "^4.6.7"
   }
 }

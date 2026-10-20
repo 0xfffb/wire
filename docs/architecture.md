@@ -10,7 +10,7 @@
 | access token | 约 2 小时（7200 秒） |
 | 历史成交 | 单次查询窗口约 90 天，每页最多 50 条 |
 | 订阅者看到的数据 | 平台快照与读模型，不直连券商 |
-| 数据库 | SQLite，单文件 `data/wire.db` |
+| 数据库 | Cloudflare D1（SQLite）；经 `SqlDatabase` 端口访问，不直绑 D1 API |
 
 `trade:read` 覆盖授权账户、持仓和历史成交。`trade:write` 包含下单和撤单，平台不申请、不保存。refresh token 加密存放。订阅接口不接触券商凭证。
 
@@ -52,57 +52,45 @@ access token 过期后用 refresh token 换新令牌。刷新失败则把连接�
 
 | 层 | 选择 |
 | --- | --- |
-| 运行时 | Node.js 22+，`next start` 常驻单进程 |
+| 运行时 | Cloudflare Workers（API + 静态资源同 Worker） |
 | 语言 | TypeScript |
-| Web 框架 | Next.js（含 React）。页面在 App Router，接口在 Route Handlers |
-| 样式 | Tailwind CSS |
-| 数据库 | Node 内置 `node:sqlite`，WAL。只在 Node 运行时打开 |
-| 表结构 | Drizzle 定义表并生成迁移 |
+| API | Hono（`/api/*`） |
+| 前端 | Astro（`output: static`）+ React islands；产物 `web/dist` → Workers Assets |
+| 主库 | D1，经 `SqlDatabase`；表结构用 `src/db/migrations` SQL |
+| 旁路存储 | KV（`KvStore`）；队列（`Queue`，可选） |
+| 支付 | Stripe（`Payment` 端口） |
+| 券商 | Futu / SnapTrade（`Brokerage` 端口） |
 | 请求校验 | Zod |
-| 平台登录 | HttpOnly Cookie 会话，密码用 `node:crypto` 的 scrypt |
-| 券商授权 | 服务端完成富途 OAuth 2.1 + PKCE |
-| 同步 | `instrumentation.ts` 里的进程内定时器。失败写在连接状态上，由控制台展示 |
+| 同步 | Cron `dispatch-sync` → Queue → `sync-holdings` |
 
-浏览器只拿会话 Cookie。富途的 access token 和 refresh token 留在服务端 SQLite 里。
+浏览器只拿会话 Cookie。券商 token 留在服务端主库。
 
-目录与上面的模块对应。Next.js 使用 `src/app` 做页面和回调，业务代码放在 `src` 下的独立目录。
+**迁移约定**：`src/` 业务层不出现 `env.*`；平台与第三方只在 `src/adapters/`。
 
 ```text
 wire/
-├── docs/architecture.md
-├── data/wire.db
 ├── src/
-│   ├── instrumentation.ts       # 启动同步定时器
-│   ├── app/
-│   │   ├── login/               # 登录 / 注册
-│   │   ├── following/           # 关注列表
-│   │   ├── p/[handle]/          # 订阅者看到的主页
-│   │   ├── oauth/futu/callback/ # 只接收 code，交给服务端
-│   │   ├── publisher/           # 概览、券商、持仓、记录、披露、预览
-│   │   └── api/                 # 发布者私有读接口与发布读模型
-│   ├── auth/                    # 密码与 Cookie 会话
-│   ├── db/                      # SQLite、Drizzle 表、迁移
-│   ├── broker/                  # Broker 抽象类、BrokerRegistry、FutuBroker
-│   ├── token/                   # token 加密
-│   ├── sync/                    # 刷新令牌、快照、diff
-│   └── read/                    # 私有持仓与披露投影
-├── package.json
-└── tsconfig.json
+│   ├── app.ts / deps.ts
+│   ├── routes/ services/ jobs/ ports/ middleware/ schemas/
+│   ├── db/migrations/ # D1 SQL
+│   └── adapters/
+│       ├── cloudflare/    # fetch / scheduled / queue + D1/KV/Queue/Crypto
+│       ├── brokers/
+│       └── stripe/
+├── web/               # Astro → dist → [assets]
+├── test/fakes/
+├── wrangler.toml
+└── package.json       # workspaces: ["web"]
 ```
 
 ## 架构
 
-第一期放在现有 TypeScript 项目里，做成模块单体。`api` 与 `sync` 同一进程，共用一个 SQLite 文件 `data/wire.db`。券商差异收进抽象类 `Broker`，富途是它的一个实现。第二家券商同样继承 `Broker` 并注册进 `BrokerRegistry`。
-
 ```
-web/publisher  发布者控制台：连接、持仓、记录、披露、预览
-web/public     订阅者主页与关注列表
-web/oauth      富途回调页，只把 code 交给 api
-api            身份与关注、披露策略、读模型、发布者私有读接口
-sync           刷新令牌、拉取、归一化、快照 diff
-broker/futu    OAuth、账户、持仓、成交的请求与字段映射
-token vault    加密 refresh token，按连接取出并轮换
-sqlite         data/wire.db，WAL，api 与 sync 共用
+浏览器
+  ├─ 页面 → Workers Assets（Astro dist）
+  └─ /api/* → Hono（run_worker_first）
+cron / queue → jobs → services
+Deps ← adapters/cloudflare/make-deps
 ```
 
 发布者浏览器只访问本平台的 `web/publisher` 和 `api`。跳转富途授权页是唯一一次离开本站。回调回到 `web/oauth`，页面不解析持仓，只把 `code` 和 `state` 交给 api。token 不下发到浏览器。
@@ -162,9 +150,9 @@ sqlite         data/wire.db，WAL，api 与 sync 共用
 
 ## 数据
 
-数据库使用 SQLite。文件放在 `data/wire.db`，开启 WAL，使同步写入时读接口仍可查询。数量、价格、市值沿用券商返回的十进制字符串，不存浮点数。`Fill.deal_id` 加唯一约束做成交去重。表结构用迁移脚本管理，迁移记录写在库内。
+主库使用 Cloudflare D1（SQLite 方言）。数量、价格、市值沿用券商返回的十进制字符串，不存浮点数。`Fill.deal_id` 加唯一约束做成交去重。表结构用 `src/db/migrations` 管理，由 Wrangler D1 migrations 应用。
 
-加密后的 refresh token 存在 `BrokerConnection` 表。库文件不进版本库。访问收口在仓储层，页面和券商适配器不直接写 SQL。
+加密后的 refresh token 存在 `BrokerConnection` 表。访问收口在仓储层（经 `SqlDatabase`），页面和券商适配器不直接写 SQL，也不直接使用 `env.DB` / `env.KV`。
 
 | 对象 | 关键内容 | 可见性 |
 | --- | --- | --- |

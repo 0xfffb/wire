@@ -1,0 +1,32 @@
+name = "wire"
+main = "src/cloudflare.ts"
+compatibility_date = "2025-10-08"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./web/dist"
+not_found_handling = "404-page"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "wire"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "src/db/migrations"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "00000000-0000-0000-0000-000000000000"
+
+[[queues.producers]]
+binding = "QUEUE"
+queue = "wire-jobs"
+
+[[queues.consumers]]
+queue = "wire-jobs"
+max_batch_size = 10
+max_retries = 3
+
+# 本地可用：curl "http://localhost:8787/cdn-cgi/handler/scheduled"
+[triggers]
+crons = ["* * * * *"]
