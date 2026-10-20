@@ -1,13 +1,15 @@
 ---
+import PublisherHome from "../../components/PublisherHome.astro";
 import Base from "../../layouts/Base.astro";
+import { publisherByHandle, publishers } from "../../lib/publishers";
 
 export function getStaticPaths() {
-  return [{ params: { handle: "demo" } }];
+  return publishers.map((p) => ({ params: { handle: p.handle } }));
 }
 
-const { handle } = Astro.params;
+const publisher = publisherByHandle(Astro.params.handle);
 ---
-<Base title={`${handle} · Wire`} description={`发布者 ${handle} 的公开主页`}>
-  <h1>@{handle}</h1>
-  <p>发布者公开主页占位（SEO / OG 在此扩展）。</p>
+<Base title={`${publisher.name} · Wire`} heading={publisher.name} active="discover" meName={publisher.handle === "demo"}>
+  <a slot="topbar" class="crumb" href="/" data-i18n="discover">发现</a>
+  <PublisherHome publisher={publisher} />
 </Base>

@@ -1,0 +1,74 @@
+---
+import Label from "../../components/Label.astro";
+import PublisherGate from "../../components/PublisherGate.astro";
+import PublisherTop from "../../components/PublisherTop.astro";
+import Base from "../../layouts/Base.astro";
+import { consoleMe } from "../../lib/console";
+---
+<Base title="持仓 · Wire" heading="持仓" headingKey="nav_holdings" titleKey="title_holdings" active="holdings">
+  <PublisherGate />
+  <PublisherTop slot="topbar" />
+
+  <div class="toolbar" id="accounts">
+    <button class="chip is-on" type="button" data-account="all" data-i18n="all">全部</button>
+    {consoleMe.accounts.filter((a) => a.on).map((acc) => (
+      <button class="chip" type="button" data-account={acc.id}>{acc.id}</button>
+    ))}
+  </div>
+
+  <div class="page" style="padding-top:0">
+    <div class="well">
+      <table class="holdings">
+        <thead>
+          <tr>
+            <th data-i18n="symbol">标的</th>
+            <th data-i18n="side">方向</th>
+            <th class="num" data-i18n="qty">数量</th>
+            <th class="num hide-sm" data-i18n="cost">成本</th>
+            <th class="num" data-i18n="value">市值</th>
+            <th class="num" data-i18n="pnl">盈亏</th>
+          </tr>
+        </thead>
+        <tbody>
+          {consoleMe.holdings.map((row) => (
+            <tr data-account={row.account}>
+              <td>
+                <strong>{row.code}.<span data-zh={row.name.zh} data-en={row.name.en}>{row.name.zh}</span></strong>
+              </td>
+              <td>
+                {row.side === "long" ? (
+                  <Label tone="buy" />
+                ) : row.side === "short" ? (
+                  <Label tone="sell" />
+                ) : (
+                  <span class="dash">—</span>
+                )}
+              </td>
+              <td class="num">{row.qty}</td>
+              <td class="num hide-sm">{row.cost}</td>
+              <td class="num">{row.value}</td>
+              <td class={`num ${row.pl.startsWith("+") ? "up" : row.pl.startsWith("-") ? "down" : ""}`}>
+                {row.pl}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</Base>
+
+<script>
+  const chips = document.getElementById("accounts");
+  let account = "all";
+
+  chips?.addEventListener("click", (event) => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-account]");
+    if (!btn) return;
+    account = btn.dataset.account ?? "all";
+    chips.querySelectorAll(".chip").forEach((el) => el.classList.toggle("is-on", el === btn));
+    for (const row of document.querySelectorAll<HTMLElement>("tr[data-account]")) {
+      row.classList.toggle("hidden", account !== "all" && row.dataset.account !== account);
+    }
+  });
+</script>

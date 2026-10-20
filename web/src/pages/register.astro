@@ -1,0 +1,48 @@
+---
+import Base from "../layouts/Base.astro";
+---
+<Base title="注册 · Wire" titleKey="title_register" auth>
+  <h1 data-i18n="register">注册</h1>
+  <p class="lede" data-i18n="register_lede">注册后即可订阅，之后也可以去当发布者。</p>
+  <form class="form" action="/app" method="get">
+    <label>
+      <span data-i18n="username">用户名</span>
+      <span class="handle-field">
+        <span class="handle-prefix" aria-hidden="true">@</span>
+        <input
+          type="text"
+          name="handle"
+          placeholder="name"
+          autocomplete="username"
+          spellcheck="false"
+          autocapitalize="off"
+        />
+      </span>
+    </label>
+    <label>
+      <span data-i18n="email">邮箱</span>
+      <input type="email" name="email" placeholder="you@example.com" autocomplete="email" />
+    </label>
+    <label>
+      <span data-i18n="password">密码</span>
+      <input type="password" name="password" placeholder="••••••••" autocomplete="new-password" />
+    </label>
+    <label>
+      <span data-i18n="confirm_password">确认密码</span>
+      <input type="password" name="confirm" placeholder="••••••••" autocomplete="new-password" />
+    </label>
+    <button class="btn" type="submit" data-i18n="continue">继续</button>
+  </form>
+  <p class="auth-switch">
+    <span data-i18n="have_account">已有账号？</span>
+    {" "}
+    <a href="/login" data-i18n="login">登录</a>
+  </p>
+</Base>
+
+<script>
+  const input = document.querySelector<HTMLInputElement>('input[name="handle"]');
+  input?.addEventListener("input", () => {
+    if (input.value.startsWith("@")) input.value = input.value.replace(/^@+/, "");
+  });
+</script>

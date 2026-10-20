@@ -1,60 +1,143 @@
 ---
+import Prefs from "../components/Prefs.astro";
+import { publisherNav } from "../lib/console";
+import "../styles/global.css";
+import type { MessageKey } from "../lib/i18n";
+
+type PublisherId = (typeof publisherNav)[number]["id"];
+
 interface Props {
   title?: string;
   description?: string;
+  heading?: string;
+  headingKey?: MessageKey;
+  titleKey?: MessageKey;
+  active?: "discover" | "app" | "login" | "apply" | PublisherId;
+  auth?: boolean;
+  meName?: boolean;
 }
 
 const {
   title = "Wire",
-  description = "仓位分享平台",
+  description = "发现并订阅发布者的真实仓位快照。非投资建议。",
+  heading,
+  headingKey,
+  titleKey,
+  active,
+  auth = false,
+  meName = false,
 } = Astro.props;
 ---
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark" data-theme-pref="system" data-locale="zh" data-publish="none" data-title-key={titleKey}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    <meta name="theme-color" content="#08090a" />
     <title>{title}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..600&family=Noto+Sans+SC:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script is:inline>
+      (function () {
+        try {
+          var pref = localStorage.getItem("wire.theme");
+          if (pref !== "light" && pref !== "dark" && pref !== "system") pref = "system";
+          var t = pref === "system"
+            ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
+            : pref;
+          document.documentElement.setAttribute("data-theme-pref", pref);
+          document.documentElement.setAttribute("data-theme", t);
+          var l = localStorage.getItem("wire.locale");
+          if (l !== "en" && l !== "zh") l = "zh";
+          document.documentElement.setAttribute("data-locale", l);
+          document.documentElement.lang = l === "en" ? "en" : "zh-CN";
+          var p = "none";
+          try {
+            var raw = localStorage.getItem("wire.publish");
+            if (raw) {
+              var o = JSON.parse(raw);
+              if (o && (o.status === "pending" || o.status === "approved" || o.status === "none")) p = o.status;
+            }
+          } catch (e2) {}
+          document.documentElement.setAttribute("data-publish", p);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
-    <header>
-      <a href="/">Wire</a>
-      <nav>
-        <a href="/app">控制台</a>
-      </nav>
-    </header>
-    <main>
-      <slot />
-    </main>
+    {auth ? (
+      <div class="auth">
+        <div class="auth-card">
+          <a class="brand" href="/">
+            <span class="brand-mark">W</span>
+            Wire
+          </a>
+          <slot />
+        </div>
+      </div>
+    ) : (
+      <div class="app">
+        <aside class="sidebar">
+          <a class="brand" href="/">
+            <span class="brand-mark">W</span>
+            Wire
+          </a>
+          <nav class="side-nav">
+            <a class={active === "discover" ? "is-active" : ""} href="/" data-i18n="discover">发现</a>
+            <a class={active === "app" ? "is-active" : ""} href="/app" data-i18n="subscriptions">我的订阅</a>
+            <div class="nav-section" data-publish-full>
+              <div class="nav-label" data-i18n="publish">发布</div>
+              {publisherNav.map((item) => (
+                <a class={active === item.id ? "is-active" : ""} href={item.href} data-i18n={item.key}>
+                  {item.zh}
+                </a>
+              ))}
+            </div>
+            <div class="nav-section" data-publish-apply>
+              <div class="nav-label" data-i18n="publish">发布</div>
+              <a class={active === "apply" ? "is-active" : ""} href="/publisher/apply" data-i18n="nav_apply">申请发布</a>
+            </div>
+          </nav>
+          <div class="sidebar-end">
+            <div class="sidebar-foot">
+              <Prefs />
+            </div>
+            <nav class="side-nav">
+              <div class="side-account-row">
+                <a class:list={["side-account", active === "profile" && "is-active"]} href="/publisher/profile">
+                  <span class="avatar" data-me-avatar>阿</span>
+                  <span>
+                    <b data-me-name>阿木</b>
+                    <span>@demo</span>
+                  </span>
+                </a>
+                <a class="side-logout" href="/login" data-i18n="logout">退出</a>
+              </div>
+            </nav>
+            <div class="sidebar-legal">
+              <a href="/legal/terms" data-i18n="terms">条款</a>
+            </div>
+          </div>
+        </aside>
+        <div class="workspace">
+          <header class="topbar">
+            <h1 {...(headingKey ? { "data-i18n": headingKey } : {})} {...(meName ? { "data-me-name": "" } : {})}>{heading ?? title}</h1>
+            <slot name="topbar" />
+          </header>
+          <div class="content">
+            <slot />
+          </div>
+        </div>
+      </div>
+    )}
+    <script>
+      import { bootUi } from "../lib/i18n";
+      bootUi();
+    </script>
   </body>
 </html>
-
-<style is:global>
-  :root {
-    color-scheme: light;
-    font-family: "IBM Plex Sans", "Noto Sans SC", system-ui, sans-serif;
-    line-height: 1.5;
-    --bg: #f3efe6;
-    --ink: #1c1917;
-    --accent: #0f766e;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    min-height: 100vh;
-    background:
-      radial-gradient(1200px 500px at 10% -10%, #d9ebe7, transparent 55%),
-      linear-gradient(180deg, #f7f3ea, var(--bg));
-    color: var(--ink);
-  }
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-  }
-  header a { color: inherit; text-decoration: none; font-weight: 600; }
-  nav a { margin-left: 1rem; font-weight: 500; color: var(--accent); }
-  main { padding: 2rem 1.5rem 4rem; max-width: 48rem; }
-</style>

@@ -1,0 +1,15 @@
+---
+import PublisherGate from "../../components/PublisherGate.astro";
+import PublisherHome from "../../components/PublisherHome.astro";
+import PublisherTop from "../../components/PublisherTop.astro";
+import Base from "../../layouts/Base.astro";
+import { publisherByHandle } from "../../lib/publishers";
+
+const publisher = publisherByHandle("demo");
+---
+<Base title="预览 · Wire" heading="预览" headingKey="nav_preview" titleKey="title_preview" active="preview">
+  <PublisherGate />
+  <PublisherTop slot="topbar" />
+  <div class="preview-banner" data-i18n="preview_banner">这是订阅者将看到的主页。</div>
+  <PublisherHome publisher={publisher} subscribed />
+</Base>

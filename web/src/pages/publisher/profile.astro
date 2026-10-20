@@ -1,0 +1,99 @@
+---
+import PublisherTop from "../../components/PublisherTop.astro";
+import Base from "../../layouts/Base.astro";
+import { avatarHue } from "../../lib/publishers";
+import { consoleMe } from "../../lib/console";
+---
+<Base title="资料 · Wire" heading="资料" headingKey="nav_profile" titleKey="title_profile" active="profile">
+  <PublisherTop slot="topbar" />
+
+  <div class="page">
+    <form class="form wide" id="profile-form" onsubmit="return false">
+      <div class="identity" style="margin-bottom:4px">
+        <span class="avatar lg" data-me-avatar style={`--h:${avatarHue(consoleMe.handle)}`}>{consoleMe.name.slice(0, 1)}</span>
+        <div>
+          <button class="btn ghost" type="button" id="avatar-btn" data-i18n="change_avatar">更换头像</button>
+          <input id="avatar-file" type="file" accept="image/*" hidden />
+        </div>
+      </div>
+      <label>
+        <span data-i18n="display_name">显示名</span>
+        <input id="profile-name" type="text" name="name" value={consoleMe.name} maxlength="24" autocomplete="nickname" />
+      </label>
+      <label>
+        <span data-i18n="username">用户名</span>
+        <div class="handle-field">
+          <span class="handle-prefix">@</span>
+          <input type="text" value={consoleMe.handle} disabled />
+        </div>
+      </label>
+      <label>
+        <span data-i18n="bio_label">简介</span>
+        <textarea id="profile-bio-zh" rows="3">{consoleMe.bio.zh}</textarea>
+      </label>
+      <label>
+        <span>Bio</span>
+        <textarea id="profile-bio-en" rows="3">{consoleMe.bio.en}</textarea>
+      </label>
+      <button class="btn" type="submit" data-i18n="save_profile">保存</button>
+      <p class="note" id="profile-saved" hidden data-i18n="profile_saved">已保存，主页会用这份资料。</p>
+    </form>
+  </div>
+</Base>
+
+<script>
+  import { applyProfile, readProfile, writeProfile } from "../../lib/profile";
+
+  const name = document.getElementById("profile-name") as HTMLInputElement | null;
+  const bioZh = document.getElementById("profile-bio-zh") as HTMLTextAreaElement | null;
+  const bioEn = document.getElementById("profile-bio-en") as HTMLTextAreaElement | null;
+  const file = document.getElementById("avatar-file") as HTMLInputElement | null;
+  const saved = document.getElementById("profile-saved");
+  const form = document.getElementById("profile-form");
+  let avatar = "";
+
+  const current = readProfile();
+  if (name) name.value = current.name;
+  if (bioZh) bioZh.value = current.bioZh;
+  if (bioEn) bioEn.value = current.bioEn;
+  avatar = current.avatar;
+  applyProfile();
+
+  document.getElementById("avatar-btn")?.addEventListener("click", () => file?.click());
+  file?.addEventListener("change", () => {
+    const item = file.files?.[0];
+    if (!item) return;
+    const img = new Image();
+    const url = URL.createObjectURL(item);
+    img.onload = () => {
+      const size = 256;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      const s = Math.min(img.width, img.height);
+      const sx = (img.width - s) / 2;
+      const sy = (img.height - s) / 2;
+      ctx?.drawImage(img, sx, sy, s, s, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      avatar = canvas.toDataURL("image/jpeg", 0.82);
+      applyDraft();
+    };
+    img.src = url;
+  });
+
+  function applyDraft() {
+    writeProfile({
+      name: name?.value.trim() || current.name,
+      bioZh: bioZh?.value.trim() || current.bioZh,
+      bioEn: bioEn?.value.trim() || current.bioEn,
+      avatar,
+    });
+    applyProfile();
+  }
+
+  form?.addEventListener("submit", () => {
+    applyDraft();
+    if (saved) saved.hidden = false;
+  });
+</script>

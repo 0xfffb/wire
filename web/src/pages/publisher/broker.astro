@@ -1,0 +1,56 @@
+---
+import Label from "../../components/Label.astro";
+import PublisherGate from "../../components/PublisherGate.astro";
+import PublisherTop from "../../components/PublisherTop.astro";
+import Base from "../../layouts/Base.astro";
+import { brokers, consoleMe } from "../../lib/console";
+---
+<Base title="券商 · Wire" heading="券商" headingKey="nav_broker" titleKey="title_broker" active="broker">
+  <PublisherGate />
+  <PublisherTop slot="topbar" />
+
+  <div class="page">
+    <p class="lede" data-i18n="one_broker">可以接入多家券商，同时只能连接一家。</p>
+    <p class="note" style="margin-top:-8px" data-i18n="scope_read">只申请只读交易权限，不会下单。</p>
+
+    <h2 data-i18n="broker">券商</h2>
+    <div class="well">
+      {brokers.map((item) => {
+        const on = consoleMe.connected && consoleMe.broker === item.id;
+        const blocked = consoleMe.connected && !on;
+        return (
+          <div class="setting">
+            <b class="grow" data-zh={item.name.zh} data-en={item.name.en}>{item.name.zh}</b>
+            {on ? (
+              <>
+                <span class="pill" data-tone="ok">
+                  <i class="pill-dot" aria-hidden="true"></i>
+                  <span data-i18n="connected">已连接</span>
+                </span>
+                <button class="btn ghost" type="button" data-i18n="disconnect">断开</button>
+              </>
+            ) : (
+              <button class="btn" type="button" disabled={blocked} data-i18n="connect">去连接</button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+    <p class="note" data-i18n="switch_broker">断开当前券商后才能连接另一家。</p>
+
+    <h2 data-i18n="accounts">纳入账户</h2>
+    <div class="well">
+      {consoleMe.accounts.map((acc) => (
+        <label class="account-row">
+          <input type="checkbox" checked={acc.on} />
+          <span class="grow">{acc.id}</span>
+          <Label tone={acc.market} />
+        </label>
+      ))}
+    </div>
+    <div class="toolbar" style="padding:16px 0 0">
+      <button class="btn" type="button" data-i18n="confirm_accounts">确认纳入</button>
+      <button class="btn ghost" type="button" data-i18n="reauth">重新授权</button>
+    </div>
+  </div>
+</Base>

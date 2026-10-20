@@ -1,0 +1,20 @@
+---
+interface Props {
+  tone: "us" | "hk" | "buy" | "sell" | "fill";
+}
+
+const copy = {
+  us: { key: "market_us", zh: "美股" },
+  hk: { key: "market_hk", zh: "港股" },
+  buy: { key: "buy", zh: "买入" },
+  sell: { key: "sell", zh: "卖出" },
+  fill: { key: "fill_tag", zh: "成交" },
+} as const;
+
+const { tone } = Astro.props;
+const item = copy[tone];
+---
+<span class="pill" data-tone={tone}>
+  <i class="pill-dot" aria-hidden="true"></i>
+  <span data-i18n={item.key}>{item.zh}</span>
+</span>

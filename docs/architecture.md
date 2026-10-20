@@ -55,7 +55,7 @@ access token 过期后用 refresh token 换新令牌。刷新失败则把连接�
 | 运行时 | Cloudflare Workers（API + 静态资源同 Worker） |
 | 语言 | TypeScript |
 | API | Hono（`/api/*`） |
-| 前端 | Astro（`output: static`）+ React islands；产物 `web/dist` → Workers Assets |
+| 前端 | Astro（`output: static`）+ React islands；产物 `web/dist` → Workers Assets。界面约定见 [DESIGN.md](./DESIGN.md) |
 | 主库 | D1，经 `SqlDatabase`；表结构用 `src/db/migrations` SQL |
 | 旁路存储 | KV（`KvStore`）；队列（`Queue`，可选） |
 | 支付 | Stripe（`Payment` 端口） |

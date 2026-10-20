@@ -1,0 +1,18 @@
+---
+import { brokers, consoleMe } from "../lib/console";
+
+const current = brokers.find((item) => item.id === consoleMe.broker);
+---
+<div class="top-actions">
+  {consoleMe.connected && current ? (
+    <span class="pill" data-tone="ok">
+      <i class="pill-dot" aria-hidden="true"></i>
+      <span data-zh={current.name.zh} data-en={current.name.en}>{current.name.zh}</span>
+    </span>
+  ) : (
+    <span class="pill">
+      <i class="pill-dot" aria-hidden="true"></i>
+      <span data-i18n="disconnected">未连接</span>
+    </span>
+  )}
+</div>

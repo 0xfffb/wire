@@ -1,0 +1,7 @@
+<script>
+  import { readPublish } from "../lib/publish";
+
+  if (readPublish().status !== "approved") {
+    location.replace("/publisher/apply");
+  }
+</script>

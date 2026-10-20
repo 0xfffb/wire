@@ -1,0 +1,23 @@
+---
+import Base from "../layouts/Base.astro";
+---
+<Base title="登录 · Wire" titleKey="title_login" active="login" auth>
+  <h1 data-i18n="login">登录</h1>
+  <p class="lede" data-i18n="login_lede">同一账号可以订阅，也可以之后去当发布者。</p>
+  <form class="form" action="/app" method="get">
+    <label>
+      <span data-i18n="email">邮箱</span>
+      <input type="email" name="email" placeholder="you@example.com" autocomplete="email" />
+    </label>
+    <label>
+      <span data-i18n="password">密码</span>
+      <input type="password" name="password" placeholder="••••••••" autocomplete="current-password" />
+    </label>
+    <button class="btn" type="submit" data-i18n="continue">继续</button>
+  </form>
+  <p class="auth-switch">
+    <span data-i18n="no_account">没有账号？</span>
+    {" "}
+    <a href="/register" data-i18n="register">注册</a>
+  </p>
+</Base>

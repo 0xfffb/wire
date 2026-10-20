@@ -1,0 +1,62 @@
+---
+import Label from "../../components/Label.astro";
+import PublisherGate from "../../components/PublisherGate.astro";
+import PublisherTop from "../../components/PublisherTop.astro";
+import Base from "../../layouts/Base.astro";
+import { publisherByHandle } from "../../lib/publishers";
+
+const fills = publisherByHandle("demo").fills;
+---
+<Base title="记录 · Wire" heading="记录" headingKey="nav_records" titleKey="title_records" active="records">
+  <PublisherGate />
+  <PublisherTop slot="topbar" />
+
+  <div class="page">
+    <h2 style="margin-top:0" data-i18n="trades">交易记录</h2>
+    {fills.length ? (
+      <div class="well">
+        <table class="holdings">
+          <thead>
+            <tr>
+              <th data-i18n="time">时间</th>
+              <th data-i18n="symbol">标的</th>
+              <th data-i18n="status">状态</th>
+              <th data-i18n="side">方向</th>
+              <th data-i18n="currency">货币</th>
+              <th class="num" data-i18n="qty">数量</th>
+              <th class="num" data-i18n="fill_price">价格</th>
+              <th class="num" data-i18n="notional">成交额</th>
+            </tr>
+          </thead>
+          <tbody>
+            {fills.map((row) => (
+              <tr>
+                <td>{row.time}</td>
+                <td>
+                  <strong>{row.code}.<span data-zh={row.name.zh} data-en={row.name.en}>{row.name.zh}</span></strong>
+                </td>
+                <td><Label tone="fill" /></td>
+                <td>
+                  {row.side === "buy" ? <Label tone="buy" /> : <Label tone="sell" />}
+                </td>
+                <td>{row.currency}</td>
+                <td class="num">{row.qty}</td>
+                <td class="num">{row.price}</td>
+                <td class="num">{row.amount}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    ) : (
+      <p class="note" data-i18n="fills_empty">暂无成交。</p>
+    )}
+    <form class="form" style="margin-top:16px;max-width:none" onsubmit="return false">
+      <label>
+        <span data-i18n="note_label">备注</span>
+        <input type="text" data-i18n="note_label" data-i18n-attr="placeholder" placeholder="备注" />
+      </label>
+      <button class="btn" type="button" data-i18n="continue">继续</button>
+    </form>
+  </div>
+</Base>

@@ -1,8 +1,86 @@
 ---
+import Label from "../components/Label.astro";
 import Base from "../layouts/Base.astro";
+import { avatarHue, formatSubscribers, publishers } from "../lib/publishers";
 ---
-<Base title="Wire">
-  <h1>Wire</h1>
-  <p>仓位分享。公开页由 Astro 预渲染，数据走同源 <code>/api/*</code>。</p>
-  <p><a href="/api/health">API health</a></p>
+<Base title="发现 · Wire" heading="发现" headingKey="discover" titleKey="title_discover" active="discover">
+  <input
+    slot="topbar"
+    class="search"
+    id="q"
+    type="search"
+    placeholder="搜索发布者"
+    data-i18n="search_publishers"
+    data-i18n-attr="placeholder"
+  />
+
+  <div class="toolbar" id="markets">
+    <button class="chip is-on" type="button" data-market="all" data-i18n="all">全部</button>
+    <button class="chip" type="button" data-market="us" data-i18n="market_us">美股</button>
+    <button class="chip" type="button" data-market="hk" data-i18n="market_hk">港股</button>
+    <span style="flex:1"></span>
+    <a class="btn ghost" href="/publisher/apply" data-i18n="become_publisher">成为发布者</a>
+  </div>
+
+  <div class="issue-list" id="list">
+    {publishers.map((p) => {
+      const me = p.handle === "demo";
+      return (
+      <a
+        class="issue"
+        href={`/publishers/${p.handle}`}
+        data-name={`${p.name} ${p.handle} ${p.bio.zh} ${p.bio.en}`}
+        data-markets={p.markets.join(",")}
+        {...(me ? { "data-me-row": "" } : {})}
+      >
+        <div class="issue-main">
+          <span class="avatar" style={`--h:${avatarHue(p.handle)}`} {...(me ? { "data-me-avatar": "" } : {})}>{p.name.slice(0, 1)}</span>
+          <div class="who">
+            <b {...(me ? { "data-me-name": "" } : {})}>{p.name}</b>
+            <span class="bio" data-zh={p.bio.zh} data-en={p.bio.en} {...(me ? { "data-me-bio": "" } : {})}>{p.bio.zh}</span>
+          </div>
+        </div>
+        <div class="pills hide-sm">
+          {p.markets.map((m) => <Label tone={m} />)}
+        </div>
+        <div class={`col ${p.ytd.startsWith("-") ? "down" : "up"}`}>{p.ytd}</div>
+        <div class="col hide-sm">{formatSubscribers(p.subscribers)}</div>
+        <div class="col">¥{p.price}</div>
+      </a>
+      );
+    })}
+  </div>
+  <p class="empty hidden" id="empty" data-i18n="no_matches">没有匹配的发布者</p>
 </Base>
+
+<script>
+  const q = document.getElementById("q") as HTMLInputElement | null;
+  const list = document.getElementById("list");
+  const chips = document.getElementById("markets");
+  let market = "all";
+
+  function apply() {
+    if (!list) return;
+    const text = (q?.value ?? "").trim().toLowerCase();
+    let shown = 0;
+    for (const row of list.querySelectorAll<HTMLElement>("a.issue")) {
+      const hay = (row.dataset.name ?? "").toLowerCase();
+      const markets = row.dataset.markets ?? "";
+      const okMarket = market === "all" || markets.includes(market);
+      const okText = !text || hay.includes(text);
+      const ok = okMarket && okText;
+      row.classList.toggle("hidden", !ok);
+      if (ok) shown += 1;
+    }
+    document.getElementById("empty")?.classList.toggle("hidden", shown > 0);
+  }
+
+  q?.addEventListener("input", apply);
+  chips?.addEventListener("click", (event) => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-market]");
+    if (!btn) return;
+    market = btn.dataset.market ?? "all";
+    chips.querySelectorAll(".chip").forEach((el) => el.classList.toggle("is-on", el === btn));
+    apply();
+  });
+</script>

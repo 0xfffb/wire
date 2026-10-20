@@ -1,0 +1,91 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+<Base title="申请发布 · Wire" heading="申请发布" headingKey="nav_apply" titleKey="title_apply" active="apply">
+  <div class="page">
+    <div id="apply-none">
+      <p class="lede" data-i18n="apply_lede">发布前需要申请。通过后才能连接券商、同步仓位。</p>
+      <form class="form wide" id="apply-form" onsubmit="return false">
+        <div>
+          <span class="field-label" data-i18n="market">市场</span>
+          <div class="toolbar" id="apply-markets" style="padding:8px 0 0">
+            <button class="chip" type="button" data-market="us" data-i18n="market_us">美股</button>
+            <button class="chip" type="button" data-market="hk" data-i18n="market_hk">港股</button>
+          </div>
+        </div>
+        <label>
+          <span data-i18n="apply_note">策略说明</span>
+          <textarea id="apply-note" rows="4" data-i18n="apply_note_ph" data-i18n-attr="placeholder" placeholder="交易风格、市场，一两句话即可。"></textarea>
+        </label>
+        <p class="note" id="apply-error" hidden data-i18n="apply_need_market">至少选一个市场。</p>
+        <button class="btn" type="submit" data-i18n="apply_submit">提交申请</button>
+      </form>
+    </div>
+
+    <div id="apply-pending" hidden>
+      <p class="lede" data-i18n="apply_pending_lede">申请审核中。通过后会出现券商、持仓和披露。</p>
+      <button class="btn" type="button" id="apply-pass" data-i18n="apply_pass">通过审核</button>
+    </div>
+
+    <div id="apply-approved" hidden>
+      <p class="lede" data-i18n="apply_ok_lede">申请已通过，可以连接券商并披露仓位。</p>
+      <a class="btn" href="/publisher" data-i18n="apply_go">去概览</a>
+    </div>
+  </div>
+</Base>
+
+<script>
+  import { readPublish, writePublish } from "../../lib/publish";
+
+  const none = document.getElementById("apply-none");
+  const pending = document.getElementById("apply-pending");
+  const approved = document.getElementById("apply-approved");
+  const note = document.getElementById("apply-note") as HTMLTextAreaElement | null;
+  const error = document.getElementById("apply-error");
+  const form = document.getElementById("apply-form");
+  const chips = document.getElementById("apply-markets");
+  const picked = new Set<"us" | "hk">();
+
+  function show(status: "none" | "pending" | "approved") {
+    if (none) none.hidden = status !== "none";
+    if (pending) pending.hidden = status !== "pending";
+    if (approved) approved.hidden = status !== "approved";
+  }
+
+  const current = readPublish();
+  show(current.status);
+  if (note) note.value = current.note;
+  for (const market of current.markets) {
+    picked.add(market);
+    chips?.querySelector(`[data-market="${market}"]`)?.classList.add("is-on");
+  }
+
+  chips?.addEventListener("click", (event) => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-market]");
+    const market = btn?.dataset.market;
+    if (market !== "us" && market !== "hk") return;
+    if (picked.has(market)) picked.delete(market);
+    else picked.add(market);
+    btn.classList.toggle("is-on", picked.has(market));
+    if (error) error.hidden = true;
+  });
+
+  form?.addEventListener("submit", () => {
+    if (picked.size === 0) {
+      if (error) error.hidden = false;
+      return;
+    }
+    writePublish({
+      status: "pending",
+      markets: [...picked],
+      note: note?.value.trim() ?? "",
+    });
+    show("pending");
+  });
+
+  document.getElementById("apply-pass")?.addEventListener("click", () => {
+    const state = readPublish();
+    writePublish({ ...state, status: "approved" });
+    location.href = "/publisher";
+  });
+</script>

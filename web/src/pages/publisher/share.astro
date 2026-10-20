@@ -1,0 +1,31 @@
+---
+import PublisherGate from "../../components/PublisherGate.astro";
+import PublisherTop from "../../components/PublisherTop.astro";
+import Base from "../../layouts/Base.astro";
+import { consoleMe } from "../../lib/console";
+---
+<Base title="披露 · Wire" heading="披露" headingKey="nav_share" titleKey="title_share" active="share">
+  <PublisherGate />
+  <PublisherTop slot="topbar" />
+
+  <div class="page">
+    <div class="well">
+      <div class="setting">
+        <span class="grow" data-i18n="audience">受众</span>
+        <div class="toolbar" style="padding:0;gap:4px">
+          <button class:list={["chip", consoleMe.policy.audience === "public" && "is-on"]} type="button" data-i18n="audience_public">公开主页</button>
+          <button class:list={["chip", consoleMe.policy.audience === "subs" && "is-on"]} type="button" data-i18n="audience_subs">仅订阅者</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</Base>
+
+<script>
+  const audience = document.querySelectorAll<HTMLButtonElement>(".setting .chip");
+  audience.forEach((el) => {
+    el.addEventListener("click", () => {
+      audience.forEach((btn) => btn.classList.toggle("is-on", btn === el));
+    });
+  });
+</script>
