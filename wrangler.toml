@@ -3,6 +3,13 @@ main = "src/cloudflare.ts"
 compatibility_date = "2025-10-08"
 compatibility_flags = ["nodejs_compat"]
 
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[observability.logs]
+invocation_logs = true
+
 [assets]
 directory = "./web/dist"
 binding = "ASSETS"
@@ -12,7 +19,7 @@ run_worker_first = ["/api/*", "/users/*", "/oauth/*"]
 [[d1_databases]]
 binding = "DB"
 database_name = "wire"
-database_id = "fce762ac-d8d6-433c-ba32-e546e5375894"
+database_id = "6094e70a-bc64-47a0-89df-7bec80aba5ba"
 migrations_dir = "src/db/migrations"
 
 [[kv_namespaces]]

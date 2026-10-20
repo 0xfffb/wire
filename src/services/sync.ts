@@ -18,6 +18,11 @@ class HoldingsSync {
   async runUser(userId: string) {
     const token = await Brokers.from(this.deps).accessToken(userId);
     if (!token) throw new Error("no_token");
+    try {
+      await Brokers.from(this.deps).refreshAccounts(userId);
+    } catch {
+      /* keep existing accounts */
+    }
     const { results } = await this.deps.database
       .prepare("SELECT id FROM accounts WHERE user_id = ? AND included = 1")
       .bind(userId)

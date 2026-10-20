@@ -86,13 +86,6 @@ class Brokers {
   async view(userId: string) {
     const link = await this.connected(userId);
     const token = link ? await this.readToken(userId) : null;
-    if (link && token?.status !== "reauth") {
-      try {
-        await this.refreshAccounts(userId);
-      } catch {
-        /* show saved accounts */
-      }
-    }
     return {
       connected: Boolean(link),
       broker: link,
