@@ -1,4 +1,5 @@
-import { applyProfile } from "./profile";
+import { ApiError, apiSend, getUser } from "./api";
+import { applyProfile, applyUser } from "./profile";
 
 export type Locale = "zh" | "en";
 export type Theme = "dark" | "light";
@@ -137,8 +138,6 @@ const zh = {
   preview_banner: "这是订阅者将看到的主页。",
   console_note: "接口还没接，这里只定版式。",
   note_label: "备注",
-  login_lede: "同一账号可以订阅，之后也可以申请发布。",
-  register_lede: "注册后即可订阅，之后也可以申请发布。",
   username: "用户名",
   email: "邮箱",
   password: "密码",
@@ -147,6 +146,13 @@ const zh = {
   back_discover: "返回发现",
   no_account: "没有账号？",
   have_account: "已有账号？",
+  error_invalid_body: "请检查填写内容。",
+  error_email_taken: "这个邮箱已注册。",
+  error_handle_taken: "这个用户名已被占用。",
+  error_invalid_credentials: "邮箱或密码不对。",
+  error_password_mismatch: "两次密码不一致。",
+  error_unauthorized: "请先登录。",
+  error_failed: "请求失败，请再试。",
   terms_h1: "服务条款",
   privacy_h1: "隐私政策",
   legal_body: "占位内容。",
@@ -272,8 +278,6 @@ const en: typeof zh = {
   preview_banner: "This is the subscriber view.",
   console_note: "API is not wired; this is layout only.",
   note_label: "Note",
-  login_lede: "One account can subscribe, and later apply to publish.",
-  register_lede: "Sign up to subscribe, and later apply to publish.",
   username: "Username",
   email: "Email",
   password: "Password",
@@ -282,6 +286,13 @@ const en: typeof zh = {
   back_discover: "Back to Discover",
   no_account: "No account?",
   have_account: "Have an account?",
+  error_invalid_body: "Check the form and try again.",
+  error_email_taken: "This email is already registered.",
+  error_handle_taken: "This username is taken.",
+  error_invalid_credentials: "Email or password is wrong.",
+  error_password_mismatch: "Passwords do not match.",
+  error_unauthorized: "Sign in first.",
+  error_failed: "Request failed. Try again.",
   terms_h1: "Terms",
   privacy_h1: "Privacy",
   legal_body: "Placeholder.",
@@ -422,4 +433,21 @@ export function bootUi() {
   } catch {
     /* ignore */
   }
+
+  document.querySelectorAll<HTMLAnchorElement>(".side-logout").forEach((el) => {
+    el.addEventListener("click", (event) => {
+      event.preventDefault();
+      void apiSend("/api/auth/logout", "POST")
+        .catch(() => undefined)
+        .then(() => {
+          location.href = "/login";
+        });
+    });
+  });
+
+  void getUser()
+    .then((user) => applyUser(user))
+    .catch((error) => {
+      if (!(error instanceof ApiError && error.status === 401)) return;
+    });
 }

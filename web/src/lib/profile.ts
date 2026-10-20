@@ -1,3 +1,5 @@
+import type { CurrentUser } from "./api";
+
 export const PROFILE_KEY = "wire.profile";
 
 export type ProfileDraft = {
@@ -73,4 +75,18 @@ export function applyProfile() {
   for (const el of document.querySelectorAll<HTMLElement>("[data-me-row]")) {
     el.dataset.name = `${profile.name} demo ${profile.bioZh} ${profile.bioEn}`;
   }
+}
+
+export function applyUser(user: CurrentUser) {
+  const current = readProfile();
+  writeProfile({
+    name: user.name,
+    bioZh: user.bioZh,
+    bioEn: user.bioEn,
+    avatar: current.avatar,
+  });
+  for (const el of document.querySelectorAll<HTMLElement>("[data-me-handle]")) {
+    el.textContent = `@${user.handle}`;
+  }
+  applyProfile();
 }

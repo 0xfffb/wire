@@ -24,7 +24,7 @@ import { consoleMe } from "../../lib/console";
         <span data-i18n="username">用户名</span>
         <div class="handle-field">
           <span class="handle-prefix">@</span>
-          <input type="text" value={consoleMe.handle} disabled />
+          <input id="profile-handle" type="text" value={consoleMe.handle} disabled />
         </div>
       </label>
       <label>
@@ -42,9 +42,12 @@ import { consoleMe } from "../../lib/console";
 </Base>
 
 <script>
-  import { applyProfile, readProfile, writeProfile } from "../../lib/profile";
+  import { ApiError, apiSend, getUser, type CurrentUser } from "../../lib/api";
+  import { applyProfile, applyUser, readProfile, writeProfile } from "../../lib/profile";
+  import { readLocale, t } from "../../lib/i18n";
 
   const name = document.getElementById("profile-name") as HTMLInputElement | null;
+  const handle = document.getElementById("profile-handle") as HTMLInputElement | null;
   const bioZh = document.getElementById("profile-bio-zh") as HTMLTextAreaElement | null;
   const bioEn = document.getElementById("profile-bio-en") as HTMLTextAreaElement | null;
   const file = document.getElementById("avatar-file") as HTMLInputElement | null;
@@ -58,6 +61,20 @@ import { consoleMe } from "../../lib/console";
   if (bioEn) bioEn.value = current.bioEn;
   avatar = current.avatar;
   applyProfile();
+
+  void getUser()
+    .then((user) => fillUser(user))
+    .catch((error) => {
+      if (!(error instanceof ApiError && error.status === 401)) return;
+    });
+
+  function fillUser(user: CurrentUser) {
+    applyUser(user);
+    if (name) name.value = user.name;
+    if (handle) handle.value = user.handle;
+    if (bioZh) bioZh.value = user.bioZh;
+    if (bioEn) bioEn.value = user.bioEn;
+  }
 
   document.getElementById("avatar-btn")?.addEventListener("click", () => file?.click());
   file?.addEventListener("change", () => {
@@ -92,8 +109,26 @@ import { consoleMe } from "../../lib/console";
     applyProfile();
   }
 
-  form?.addEventListener("submit", () => {
+  form?.addEventListener("submit", (event) => {
+    event.preventDefault();
     applyDraft();
-    if (saved) saved.hidden = false;
+    void apiSend<CurrentUser>("/api/user/profile", "PATCH", {
+      name: name?.value.trim() || current.name,
+      bioZh: bioZh?.value.trim() ?? "",
+      bioEn: bioEn?.value.trim() ?? "",
+    })
+      .then((user) => {
+        fillUser(user);
+        if (saved) {
+          saved.hidden = false;
+          saved.textContent = t(readLocale(), "profile_saved");
+        }
+      })
+      .catch((error) => {
+        if (saved) {
+          saved.hidden = false;
+          saved.textContent = t(readLocale(), error instanceof ApiError && error.status === 401 ? "error_unauthorized" : "error_failed");
+        }
+      });
   });
 </script>

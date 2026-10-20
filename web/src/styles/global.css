@@ -302,7 +302,7 @@ html:not([data-publish="approved"]) [data-publish-full] { display: none; }
 }
 
 .auth-card h1 {
-  margin: 0 0 6px;
+  margin: 0 0 16px;
   font-size: 20px;
   font-weight: 590;
   letter-spacing: -0.03em;
@@ -645,6 +645,7 @@ html:not([data-publish="approved"]) [data-publish-full] { display: none; }
 }
 
 .note { color: var(--faint); font-size: 12px; margin: 12px 0 0; }
+.note.error { color: var(--down); }
 .crumb { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 510; }
 .crumb:hover { color: var(--link); }
 

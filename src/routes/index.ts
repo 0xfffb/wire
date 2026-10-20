@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 
 import type { Deps } from "../deps";
-import { requireAuth } from "../middleware";
+import { registerAuthRoutes } from "./auth";
+import { registerUserRoutes } from "./user";
 
 type AppEnv = {
   Variables: {
@@ -24,11 +25,8 @@ class ApiRouter {
 
   private registerRoutes() {
     this.app.get("/api/health", (c) => c.json({ ok: true }));
-
-    // 需登录：Cookie wire_session → KV session:{token}
-    this.app.get("/api/me", requireAuth, (c) => {
-      return c.json({ userId: c.get("userId") });
-    });
+    registerAuthRoutes(this.app);
+    registerUserRoutes(this.app);
   }
 }
 

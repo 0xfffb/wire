@@ -3,16 +3,16 @@ import Base from "../layouts/Base.astro";
 ---
 <Base title="登录 · Wire" titleKey="title_login" active="login" auth>
   <h1 data-i18n="login">登录</h1>
-  <p class="lede" data-i18n="login_lede">同一账号可以订阅，也可以之后去当发布者。</p>
-  <form class="form" action="/app" method="get">
+  <form class="form" id="login-form">
     <label>
       <span data-i18n="email">邮箱</span>
-      <input type="email" name="email" placeholder="you@example.com" autocomplete="email" />
+      <input type="email" name="email" placeholder="you@example.com" autocomplete="email" required />
     </label>
     <label>
       <span data-i18n="password">密码</span>
-      <input type="password" name="password" placeholder="••••••••" autocomplete="current-password" />
+      <input type="password" name="password" placeholder="••••••••" autocomplete="current-password" required />
     </label>
+    <p class="note error" id="auth-error" hidden></p>
     <button class="btn" type="submit" data-i18n="continue">继续</button>
   </form>
   <p class="auth-switch">
@@ -21,3 +21,43 @@ import Base from "../layouts/Base.astro";
     <a href="/register" data-i18n="register">注册</a>
   </p>
 </Base>
+
+<script>
+  import { ApiError, apiSend } from "../lib/api";
+  import { applyUser } from "../lib/profile";
+  import { readLocale, t, type MessageKey } from "../lib/i18n";
+  import type { CurrentUser } from "../lib/api";
+
+  const form = document.getElementById("login-form") as HTMLFormElement | null;
+  const errorEl = document.getElementById("auth-error");
+  const keys = {
+    invalid_body: "error_invalid_body",
+    invalid_credentials: "error_invalid_credentials",
+    unauthorized: "error_unauthorized",
+    failed: "error_failed",
+  } as const;
+
+  function showError(code: string) {
+    if (!errorEl) return;
+    const key = (code in keys ? keys[code as keyof typeof keys] : "error_failed") as MessageKey;
+    errorEl.hidden = false;
+    errorEl.textContent = t(readLocale(), key);
+  }
+
+  form?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (errorEl) errorEl.hidden = true;
+    const data = new FormData(form);
+    void apiSend<CurrentUser>("/api/auth/login", "POST", {
+      email: String(data.get("email") ?? ""),
+      password: String(data.get("password") ?? ""),
+    })
+      .then((user) => {
+        applyUser(user);
+        location.href = "/app";
+      })
+      .catch((error) => {
+        showError(error instanceof ApiError ? error.code : "failed");
+      });
+  });
+</script>

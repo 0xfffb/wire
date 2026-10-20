@@ -3,8 +3,7 @@ import Base from "../layouts/Base.astro";
 ---
 <Base title="注册 · Wire" titleKey="title_register" auth>
   <h1 data-i18n="register">注册</h1>
-  <p class="lede" data-i18n="register_lede">注册后即可订阅，之后也可以去当发布者。</p>
-  <form class="form" action="/app" method="get">
+  <form class="form" id="register-form">
     <label>
       <span data-i18n="username">用户名</span>
       <span class="handle-field">
@@ -16,21 +15,23 @@ import Base from "../layouts/Base.astro";
           autocomplete="username"
           spellcheck="false"
           autocapitalize="off"
+          required
         />
       </span>
     </label>
     <label>
       <span data-i18n="email">邮箱</span>
-      <input type="email" name="email" placeholder="you@example.com" autocomplete="email" />
+      <input type="email" name="email" placeholder="you@example.com" autocomplete="email" required />
     </label>
     <label>
       <span data-i18n="password">密码</span>
-      <input type="password" name="password" placeholder="••••••••" autocomplete="new-password" />
+      <input type="password" name="password" placeholder="••••••••" autocomplete="new-password" required />
     </label>
     <label>
       <span data-i18n="confirm_password">确认密码</span>
-      <input type="password" name="confirm" placeholder="••••••••" autocomplete="new-password" />
+      <input type="password" name="confirm" placeholder="••••••••" autocomplete="new-password" required />
     </label>
+    <p class="note error" id="auth-error" hidden></p>
     <button class="btn" type="submit" data-i18n="continue">继续</button>
   </form>
   <p class="auth-switch">
@@ -41,8 +42,48 @@ import Base from "../layouts/Base.astro";
 </Base>
 
 <script>
+  import { ApiError, apiSend, type CurrentUser } from "../lib/api";
+  import { applyUser } from "../lib/profile";
+  import { readLocale, t, type MessageKey } from "../lib/i18n";
+
+  const form = document.getElementById("register-form") as HTMLFormElement | null;
+  const errorEl = document.getElementById("auth-error");
   const input = document.querySelector<HTMLInputElement>('input[name="handle"]');
+  const keys = {
+    invalid_body: "error_invalid_body",
+    email_taken: "error_email_taken",
+    handle_taken: "error_handle_taken",
+    password_mismatch: "error_password_mismatch",
+    failed: "error_failed",
+  } as const;
+
   input?.addEventListener("input", () => {
     if (input.value.startsWith("@")) input.value = input.value.replace(/^@+/, "");
+  });
+
+  function showError(code: string) {
+    if (!errorEl) return;
+    const key = (code in keys ? keys[code as keyof typeof keys] : "error_failed") as MessageKey;
+    errorEl.hidden = false;
+    errorEl.textContent = t(readLocale(), key);
+  }
+
+  form?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (errorEl) errorEl.hidden = true;
+    const data = new FormData(form);
+    void apiSend<CurrentUser>("/api/auth/register", "POST", {
+      handle: String(data.get("handle") ?? ""),
+      email: String(data.get("email") ?? ""),
+      password: String(data.get("password") ?? ""),
+      confirm: String(data.get("confirm") ?? ""),
+    })
+      .then((user) => {
+        applyUser(user);
+        location.href = "/app";
+      })
+      .catch((error) => {
+        showError(error instanceof ApiError ? error.code : "failed");
+      });
   });
 </script>
