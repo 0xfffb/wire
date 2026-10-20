@@ -1,4 +1,4 @@
-import type { Brokerage } from "./brokerage";
+import type { FutuBrokerage } from "./brokerage/futu";
 import type { SqlDatabase } from "./storage/database";
 import type { KvStore } from "./storage/kv";
 import type { Queue } from "./storage/queue";
@@ -7,7 +7,7 @@ interface Deps {
   database: SqlDatabase;
   kv: KvStore;
   queue: Queue;
-  brokerage: Record<string, Brokerage>;
+  brokerage: { futu: FutuBrokerage };
 }
 
 export type { Deps };

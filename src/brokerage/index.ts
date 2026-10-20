@@ -1,6 +1,7 @@
 type BrokerToken = {
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string;
+  expiresIn?: number;
   accessExpiresAt?: number;
   scope?: string;
 };
@@ -23,6 +24,11 @@ type BrokerPosition = {
   currency: string;
 };
 
+type BrokerCash = {
+  currency: string;
+  cash: string;
+};
+
 type BrokerFill = {
   dealId: string;
   side: string;
@@ -40,6 +46,7 @@ type FillPage = {
 };
 
 type AuthorizeUrlInput = {
+  clientId: string;
   redirectUri: string;
   state: string;
   codeChallenge: string;
@@ -48,6 +55,7 @@ type AuthorizeUrlInput = {
 };
 
 type ExchangeCodeInput = {
+  clientId: string;
   code: string;
   redirectUri: string;
   codeVerifier: string;
@@ -75,13 +83,16 @@ abstract class Brokerage {
   abstract exchangeCode(input: ExchangeCodeInput): Promise<BrokerToken>;
 
   /** 刷新 access token。 */
-  abstract refreshToken(refreshToken: string): Promise<BrokerToken>;
+  abstract refreshToken(refreshToken: string, clientId: string): Promise<BrokerToken>;
 
   /** 已授权可同步的业务账户。 */
   abstract listAccounts(accessToken: string): Promise<BrokerAccount[]>;
 
   /** 某账户当前持仓（全量）。 */
   abstract listPositions(accessToken: string, accountId: string): Promise<BrokerPosition[]>;
+
+  /** 某账户现金余额（按币种）。 */
+  abstract listFunds(accessToken: string, accountId: string): Promise<BrokerCash[]>;
 
   /** 历史成交分页。 */
   abstract listFills(input: ListFillsInput): Promise<FillPage>;
@@ -90,6 +101,7 @@ abstract class Brokerage {
 export type {
   AuthorizeUrlInput,
   BrokerAccount,
+  BrokerCash,
   BrokerFill,
   BrokerPosition,
   BrokerToken,

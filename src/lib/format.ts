@@ -41,4 +41,25 @@ function daysLeft(expiresAt: number, now = Date.now()) {
   return Math.max(0, Math.ceil((expiresAt - now) / 86_400_000));
 }
 
-export { daysLeft, formatAmount, formatClock, startOfShanghaiDay };
+function toUnixMs(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return Date.now();
+  if (value > 1e14) return Math.floor(value / 1000);
+  if (value < 1e11) return Math.floor(value * 1000);
+  return Math.floor(value);
+}
+
+function formatMoney(value: string) {
+  const n = Number(value.replace(/,/g, ""));
+  if (!Number.isFinite(n)) return value || "—";
+  return n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+}
+
+function formatPl(ratio: string, valid: boolean) {
+  if (!valid) return "—";
+  const n = Number(ratio.replace(/,/g, ""));
+  if (!Number.isFinite(n)) return "—";
+  const sign = n > 0 ? "+" : "";
+  return `${sign}${n.toFixed(1)}%`;
+}
+
+export { daysLeft, formatAmount, formatClock, formatMoney, formatPl, startOfShanghaiDay, toUnixMs };

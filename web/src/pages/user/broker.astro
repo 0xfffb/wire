@@ -10,6 +10,8 @@ import Base from "../../layouts/Base.astro";
   <div class="page">
     <p class="lede" data-i18n="one_broker">可以接入多家券商，同时只能连接一家。</p>
     <p class="note" style="margin-top:-8px" data-i18n="scope_read">只申请只读交易权限，不会下单。</p>
+    <p class="note error hidden" id="broker-error"></p>
+    <p class="note hidden" id="broker-saved" data-i18n="accounts_saved">已保存纳入的账户。</p>
 
     <h2 data-i18n="broker">券商</h2>
     <div class="well" id="broker-list"></div>
@@ -18,31 +20,62 @@ import Base from "../../layouts/Base.astro";
     <h2 data-i18n="accounts">纳入账户</h2>
     <div class="well" id="account-list"></div>
     <div class="toolbar" style="padding:16px 0 0">
-      <button class="btn" type="button" data-i18n="confirm_accounts">确认纳入</button>
-      <button class="btn ghost" type="button" data-i18n="reauth">重新授权</button>
+      <button class="btn" type="button" id="confirm-accounts" data-i18n="confirm_accounts">确认纳入</button>
+      <button class="btn ghost" type="button" id="sync-now" data-i18n="sync_now">同步</button>
+      <button class="btn ghost" type="button" id="reauth" data-i18n="reauth">重新授权</button>
     </div>
   </div>
 </Base>
 
 <script>
-  import { apiGet, type ConsoleAccount, type Market } from "../../lib/api";
-  import { applyLocale, readLocale } from "../../lib/i18n";
+  import { ApiError, apiGet, apiSend, type ConsoleAccount, type Market } from "../../lib/api";
+  import { applyLocale, readLocale, t, type MessageKey } from "../../lib/i18n";
   import { esc, pill } from "../../lib/markup";
 
   type BrokerPayload = {
     connected: boolean;
     broker: string | null;
+    needsReauth?: boolean;
     brokers: Array<{ id: string; name: { zh: string; en: string }; ready: boolean }>;
     accounts: ConsoleAccount[];
   };
+
+  const list = document.getElementById("broker-list");
+  const accounts = document.getElementById("account-list");
+  const errorEl = document.getElementById("broker-error");
+  const savedEl = document.getElementById("broker-saved");
+  const confirmBtn = document.getElementById("confirm-accounts") as HTMLButtonElement | null;
+  const syncBtn = document.getElementById("sync-now") as HTMLButtonElement | null;
+  const reauthBtn = document.getElementById("reauth") as HTMLButtonElement | null;
+
+    const errorKeys: Record<string, MessageKey> = {
+    oauth: "error_oauth",
+    state: "error_oauth_state",
+    denied: "error_oauth_denied",
+    futu_unavailable: "error_futu_unavailable",
+    reauth: "needs_reauth",
+    sync_failed: "error_sync_failed",
+    failed: "error_failed",
+    unauthorized: "error_unauthorized",
+  };
+
+  function showError(code: string) {
+    if (!errorEl) return;
+    const key = errorKeys[code] ?? "error_failed";
+    errorEl.dataset.i18n = key;
+    errorEl.textContent = t(readLocale(), key);
+    errorEl.classList.remove("hidden");
+  }
+
+  function clearError() {
+    errorEl?.classList.add("hidden");
+  }
 
   function marketTone(markets: Market[]): Market {
     return markets[0] ?? "us";
   }
 
-  void apiGet<BrokerPayload>("/api/user/broker").then((data) => {
-    const list = document.getElementById("broker-list");
-    const accounts = document.getElementById("account-list");
+  function render(data: BrokerPayload) {
     if (list) {
       list.innerHTML = data.brokers
         .map((item) => {
@@ -50,8 +83,8 @@ import Base from "../../layouts/Base.astro";
           const blocked = data.connected && !on;
           const actions = on
             ? `<span class="pill" data-tone="ok"><i class="pill-dot" aria-hidden="true"></i><span data-i18n="connected">已连接</span></span>
-               <button class="btn ghost" type="button" data-i18n="disconnect">断开</button>`
-            : `<button class="btn" type="button"${blocked ? " disabled" : ""} data-i18n="connect">去连接</button>`;
+               <button class="btn ghost" type="button" data-action="disconnect" data-i18n="disconnect">断开</button>`
+            : `<button class="btn" type="button" data-action="connect" data-broker="${esc(item.id)}"${blocked ? " disabled" : ""} data-i18n="connect">去连接</button>`;
           return `<div class="setting">
             <b class="grow" data-zh="${esc(item.name.zh)}" data-en="${esc(item.name.en)}">${esc(item.name.zh)}</b>
             ${actions}
@@ -64,13 +97,94 @@ import Base from "../../layouts/Base.astro";
         .map((acc) => {
           const tone = marketTone(acc.markets);
           return `<label class="account-row">
-            <input type="checkbox"${acc.included ? " checked" : ""} />
+            <input type="checkbox" data-account="${esc(acc.id)}"${acc.included ? " checked" : ""}${data.connected ? "" : " disabled"} />
             <span class="grow">${esc(acc.mask)}</span>
-            ${pill(tone)}
+            ${acc.markets.length ? pill(tone) : ""}
           </label>`;
         })
         .join("");
     }
+    if (confirmBtn) confirmBtn.disabled = !data.connected;
+    if (syncBtn) syncBtn.disabled = !data.connected;
+    if (reauthBtn) reauthBtn.disabled = !data.connected;
+    if (data.needsReauth) showError("reauth");
     applyLocale(readLocale());
+  }
+
+  function showSaved(key: MessageKey) {
+    if (!savedEl) return;
+    savedEl.dataset.i18n = key;
+    savedEl.textContent = t(readLocale(), key);
+    savedEl.classList.remove("hidden");
+  }
+
+  async function connect() {
+    clearError();
+    savedEl?.classList.add("hidden");
+    try {
+      const data = await apiSend<{ url: string }>("/api/user/broker/connect", "POST", { broker: "futu" });
+      if (!data.url) throw new ApiError(502, "futu_unavailable");
+      location.href = data.url;
+    } catch (error) {
+      const code = error instanceof ApiError ? error.code : "failed";
+      showError(code === "futu_unavailable" ? "futu_unavailable" : code);
+    }
+  }
+
+  async function disconnect() {
+    clearError();
+    savedEl?.classList.add("hidden");
+    try {
+      render(await apiSend<BrokerPayload>("/api/user/broker", "DELETE"));
+    } catch (error) {
+      showError(error instanceof ApiError ? error.code : "failed");
+    }
+  }
+
+  async function saveAccounts() {
+    if (!accounts) return;
+    clearError();
+    const ids = [...accounts.querySelectorAll<HTMLInputElement>("input[data-account]:checked")].map(
+      (el) => el.dataset.account ?? "",
+    ).filter(Boolean);
+    try {
+      render(await apiSend<BrokerPayload>("/api/user/broker/accounts", "PUT", { ids }));
+      showSaved("accounts_saved");
+    } catch (error) {
+      showError(error instanceof ApiError ? error.code : "failed");
+    }
+  }
+
+  async function syncNow() {
+    clearError();
+    savedEl?.classList.add("hidden");
+    if (syncBtn) syncBtn.disabled = true;
+    try {
+      render(await apiSend<BrokerPayload>("/api/user/broker/sync", "POST"));
+      showSaved("synced");
+    } catch (error) {
+      showError(error instanceof ApiError ? error.code : "sync_failed");
+      if (syncBtn) syncBtn.disabled = false;
+    }
+  }
+
+  const queryError = new URLSearchParams(location.search).get("error");
+  if (queryError) showError(queryError);
+
+  list?.addEventListener("click", (event) => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-action]");
+    if (!btn) return;
+    if (btn.dataset.action === "connect") void connect();
+    if (btn.dataset.action === "disconnect") void disconnect();
   });
+  confirmBtn?.addEventListener("click", () => void saveAccounts());
+  syncBtn?.addEventListener("click", () => void syncNow());
+  reauthBtn?.addEventListener("click", () => void connect());
+
+  void apiGet<BrokerPayload>("/api/user/broker")
+    .then(render)
+    .catch((error) => {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) return;
+      showError("failed");
+    });
 </script>

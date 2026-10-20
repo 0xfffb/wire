@@ -2,9 +2,12 @@ import type { Hono } from "hono";
 
 import { requireAuth, requirePublisher } from "../middleware";
 import { patchProfileBody } from "../schemas/auth";
+import { accountsBody, connectBody } from "../schemas/broker";
 import { applyBody, shareBody } from "../schemas/publisher";
+import { Brokers } from "../services/brokers";
 import { PublisherConsole } from "../services/console";
 import { Publishers } from "../services/publishers";
+import { HoldingsSync } from "../services/sync";
 import { Users } from "../services/users";
 import type { AppEnv } from "./index";
 
@@ -92,8 +95,58 @@ function registerUserRoutes(app: Hono<AppEnv>) {
   });
 
   app.get("/api/user/broker", requireAuth, requirePublisher, async (context) => {
-    const console = new PublisherConsole(context.get("deps").database);
-    return context.json(await console.broker(context.get("userId") ?? ""));
+    return context.json(await Brokers.from(context.get("deps")).view(context.get("userId") ?? ""));
+  });
+
+  app.post("/api/user/broker/connect", requireAuth, requirePublisher, async (context) => {
+    const parsed = connectBody.safeParse((await readBody(context)) ?? {});
+    if (!parsed.success) return context.json({ error: "invalid_body" }, 400);
+    try {
+      const origin = new URL(context.req.url).origin;
+      return context.json(await Brokers.from(context.get("deps")).start(context.get("userId") ?? "", origin));
+    } catch {
+      return context.json({ error: "futu_unavailable" }, 502);
+    }
+  });
+
+  app.delete("/api/user/broker", requireAuth, requirePublisher, async (context) => {
+    const brokers = Brokers.from(context.get("deps"));
+    await brokers.disconnect(context.get("userId") ?? "");
+    return context.json(await brokers.view(context.get("userId") ?? ""));
+  });
+
+  app.put("/api/user/broker/accounts", requireAuth, requirePublisher, async (context) => {
+    const parsed = accountsBody.safeParse(await readBody(context));
+    if (!parsed.success) return context.json({ error: "invalid_body" }, 400);
+    const deps = context.get("deps");
+    const userId = context.get("userId") ?? "";
+    const brokers = Brokers.from(deps);
+    const view = await brokers.setIncluded(userId, parsed.data.ids);
+    try {
+      await HoldingsSync.from(deps).runUser(userId);
+    } catch {
+      try {
+        await brokers.enqueueSync(deps.queue, userId);
+      } catch {
+        /* next refresh will retry */
+      }
+    }
+    return context.json(view);
+  });
+
+  app.post("/api/user/broker/sync", requireAuth, requirePublisher, async (context) => {
+    const deps = context.get("deps");
+    const userId = context.get("userId") ?? "";
+    const brokers = Brokers.from(deps);
+    const token = await brokers.accessToken(userId);
+    if (!token) return context.json({ error: "reauth" }, 409);
+    await brokers.includeAllIfNone(userId);
+    try {
+      await HoldingsSync.from(deps).runUser(userId);
+    } catch {
+      return context.json({ error: "sync_failed" }, 502);
+    }
+    return context.json(await brokers.view(userId));
   });
 
   app.get("/api/user/share", requireAuth, requirePublisher, async (context) => {

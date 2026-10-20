@@ -122,6 +122,84 @@ class Ledger {
       amount: formatAmount(row.qty, row.price),
     } satisfies OrderRow));
   }
+
+  async replacePositions(
+    accountId: string,
+    rows: Array<{
+      code: string;
+      name: string;
+      currency: string;
+      side: HoldingSide;
+      qty: string;
+      cost: string;
+      value: string;
+      pl: string;
+    }>,
+    asOf: number,
+  ) {
+    await this.db.prepare("DELETE FROM positions WHERE account_id = ?").bind(accountId).run();
+    const inserts = rows.map((row) =>
+      this.db
+        .prepare(
+          `INSERT INTO positions (account_id, code, currency, name, side, qty, cost, value, pl, as_of)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(accountId, row.code, row.currency, row.name, row.side, row.qty, row.cost, row.value, row.pl, asOf),
+    );
+    const snapshots = rows.map((row) =>
+      this.db
+        .prepare(
+          `INSERT OR REPLACE INTO position_snapshots
+             (account_id, synced_at, code, currency, name, side, qty, cost, value, pl)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(accountId, asOf, row.code, row.currency, row.name, row.side, row.qty, row.cost, row.value, row.pl),
+    );
+    const statements = [...inserts, ...snapshots];
+    for (let i = 0; i < statements.length; i += 40) {
+      await this.db.batch(statements.slice(i, i + 40));
+    }
+  }
+
+  async upsertFills(
+    accountId: string,
+    fills: Array<{
+      dealId: string;
+      side: OrderSide;
+      code: string;
+      name: string;
+      currency: string;
+      qty: string;
+      price: string;
+      tradedAt: number;
+    }>,
+  ) {
+    if (!fills.length) return;
+    const statements = fills.map((fill) =>
+      this.db
+        .prepare(
+          `INSERT OR IGNORE INTO orders
+             (id, account_id, broker, external_id, status, side, code, name, currency, qty, filled_qty, price, traded_at)
+           VALUES (?, ?, 'futu', ?, 'filled', ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(
+          crypto.randomUUID(),
+          accountId,
+          fill.dealId,
+          fill.side,
+          fill.code,
+          fill.name,
+          fill.currency,
+          fill.qty,
+          fill.qty,
+          fill.price,
+          fill.tradedAt,
+        ),
+    );
+    for (let i = 0; i < statements.length; i += 40) {
+      await this.db.batch(statements.slice(i, i + 40));
+    }
+  }
 }
 
 export { Ledger };

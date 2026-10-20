@@ -1,6 +1,7 @@
 import { FutuBrokerage } from "./brokerage/futu";
 import { JobConsumer } from "./jobs/consumer";
 import { ApiRouter } from "./routes";
+import { Brokers } from "./services/brokers";
 import { CloudflareSqlDatabase } from "./storage/database/cloudflare";
 import { CloudflareKvStore } from "./storage/kv/cloudflare";
 import type { QueueMessage } from "./storage/queue";
@@ -26,7 +27,7 @@ function fetch(request: Request, env: CloudflareEnv, ctx: ExecutionContext) {
   return app.fetch(request, env, ctx);
 }
 
-async function scheduled(controller: ScheduledController, env: CloudflareEnv, _ctx: ExecutionContext) {
+async function scheduled(_controller: ScheduledController, env: CloudflareEnv, _ctx: ExecutionContext) {
   const deps = {
     database: new CloudflareSqlDatabase(env.DB),
     kv: new CloudflareKvStore(env.KV),
@@ -35,13 +36,7 @@ async function scheduled(controller: ScheduledController, env: CloudflareEnv, _c
       futu: new FutuBrokerage(),
     },
   };
-  await deps.queue.send({
-    type: "example",
-    payload: {
-      cron: controller.cron,
-      timestamp: new Date().toISOString(),
-    },
-  });
+  await Brokers.from(deps).enqueueDue(deps.queue);
 }
 
 async function queue(batch: MessageBatch<QueueMessage>, env: CloudflareEnv) {

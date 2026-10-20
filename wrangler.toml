@@ -7,7 +7,7 @@ compatibility_flags = ["nodejs_compat"]
 directory = "./web/dist"
 binding = "ASSETS"
 not_found_handling = "404-page"
-run_worker_first = ["/api/*", "/users/*"]
+run_worker_first = ["/api/*", "/users/*", "/oauth/*"]
 
 [[d1_databases]]
 binding = "DB"
@@ -28,6 +28,6 @@ queue = "wire-jobs"
 max_batch_size = 10
 max_retries = 3
 
-# 本地可用：curl "http://localhost:8787/cdn-cgi/handler/scheduled"
+# 本地可用：curl "http://localhost:8787/cdn-cgi/local/scheduled?cron=*/31+*+*+*+*"
 [triggers]
-crons = ["* * * * *"]
+crons = ["*/31 * * * *"]

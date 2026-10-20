@@ -3,6 +3,7 @@ import { type Context, Hono } from "hono";
 import type { Deps } from "../deps";
 import type { PublisherRecord } from "../services/publishers";
 import { registerAuthRoutes } from "./auth";
+import { registerOauthRoutes } from "./oauth";
 import { registerPublisherPublicRoutes } from "./publishers";
 import { registerUserRoutes } from "./user";
 
@@ -36,6 +37,7 @@ class ApiRouter {
     registerAuthRoutes(this.app);
     registerUserRoutes(this.app);
     registerPublisherPublicRoutes(this.app);
+    registerOauthRoutes(this.app);
     this.app.get("/users/:handle/sub", (c) => serveUserShell(c, true));
     this.app.get("/users/:handle", (c) => serveUserShell(c, false));
   }

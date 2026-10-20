@@ -5,7 +5,7 @@
   </span>
 </div>
 <script>
-  import { ApiError, apiGet } from "../lib/api";
+  import { ApiError, apiGet, apiSend } from "../lib/api";
   import { applyLocale, readLocale } from "../lib/i18n";
 
   type BrokerPayload = {
@@ -15,12 +15,27 @@
   };
 
   const root = document.getElementById("user-top");
+
+  async function syncNow(btn: HTMLButtonElement) {
+    btn.disabled = true;
+    try {
+      await apiSend("/api/user/broker/sync", "POST");
+      location.reload();
+    } catch {
+      btn.disabled = false;
+    }
+  }
+
   void apiGet<BrokerPayload>("/api/user/broker")
     .then((data) => {
       if (!root) return;
       const current = data.brokers.find((item) => item.id === data.broker);
       if (data.connected && current) {
-        root.innerHTML = `<span class="pill" data-tone="ok"><i class="pill-dot" aria-hidden="true"></i><span data-zh="${current.name.zh}" data-en="${current.name.en}">${current.name.zh}</span></span>`;
+        root.innerHTML = `<span class="pill" data-tone="ok"><i class="pill-dot" aria-hidden="true"></i><span data-zh="${current.name.zh}" data-en="${current.name.en}">${current.name.zh}</span></span>
+          <button class="btn ghost" type="button" id="user-sync" data-i18n="sync_now">同步</button>`;
+        root.querySelector<HTMLButtonElement>("#user-sync")?.addEventListener("click", (event) => {
+          void syncNow(event.currentTarget as HTMLButtonElement);
+        });
       } else {
         root.innerHTML = `<span class="pill"><i class="pill-dot" aria-hidden="true"></i><span data-i18n="disconnected">未连接</span></span>`;
       }

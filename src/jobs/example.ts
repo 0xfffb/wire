@@ -1,5 +1,5 @@
 import type { Deps } from "../deps";
-import { Job } from "./index";
+import { Job } from "./job";
 
 class ExampleJob extends Job {
   readonly type = "example";
