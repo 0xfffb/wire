@@ -1,7 +1,14 @@
 <script>
-  import { readPublish } from "../lib/publish";
+  import { ApiError, getUser } from "../lib/api";
+  import { writePublish } from "../lib/publish";
 
-  if (readPublish().status !== "approved") {
-    location.replace("/publisher/apply");
-  }
+  void getUser()
+    .then((user) => {
+      document.documentElement.setAttribute("data-publish", user.publishStatus);
+      writePublish({ status: user.publishStatus, markets: [], note: "" });
+      if (user.publishStatus !== "approved") location.replace("/user/apply");
+    })
+    .catch((error) => {
+      if (error instanceof ApiError && error.status === 401) location.replace("/login");
+    });
 </script>

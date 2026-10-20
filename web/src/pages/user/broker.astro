@@ -1,56 +1,76 @@
 ---
-import Label from "../../components/Label.astro";
-import PublisherGate from "../../components/PublisherGate.astro";
-import PublisherTop from "../../components/PublisherTop.astro";
+import UserGate from "../../components/UserGate.astro";
+import UserTop from "../../components/UserTop.astro";
 import Base from "../../layouts/Base.astro";
-import { brokers, consoleMe } from "../../lib/console";
 ---
 <Base title="券商 · Wire" heading="券商" headingKey="nav_broker" titleKey="title_broker" active="broker">
-  <PublisherGate />
-  <PublisherTop slot="topbar" />
+  <UserGate />
+  <UserTop slot="topbar" />
 
   <div class="page">
     <p class="lede" data-i18n="one_broker">可以接入多家券商，同时只能连接一家。</p>
     <p class="note" style="margin-top:-8px" data-i18n="scope_read">只申请只读交易权限，不会下单。</p>
 
     <h2 data-i18n="broker">券商</h2>
-    <div class="well">
-      {brokers.map((item) => {
-        const on = consoleMe.connected && consoleMe.broker === item.id;
-        const blocked = consoleMe.connected && !on;
-        return (
-          <div class="setting">
-            <b class="grow" data-zh={item.name.zh} data-en={item.name.en}>{item.name.zh}</b>
-            {on ? (
-              <>
-                <span class="pill" data-tone="ok">
-                  <i class="pill-dot" aria-hidden="true"></i>
-                  <span data-i18n="connected">已连接</span>
-                </span>
-                <button class="btn ghost" type="button" data-i18n="disconnect">断开</button>
-              </>
-            ) : (
-              <button class="btn" type="button" disabled={blocked} data-i18n="connect">去连接</button>
-            )}
-          </div>
-        );
-      })}
-    </div>
+    <div class="well" id="broker-list"></div>
     <p class="note" data-i18n="switch_broker">断开当前券商后才能连接另一家。</p>
 
     <h2 data-i18n="accounts">纳入账户</h2>
-    <div class="well">
-      {consoleMe.accounts.map((acc) => (
-        <label class="account-row">
-          <input type="checkbox" checked={acc.on} />
-          <span class="grow">{acc.id}</span>
-          <Label tone={acc.market} />
-        </label>
-      ))}
-    </div>
+    <div class="well" id="account-list"></div>
     <div class="toolbar" style="padding:16px 0 0">
       <button class="btn" type="button" data-i18n="confirm_accounts">确认纳入</button>
       <button class="btn ghost" type="button" data-i18n="reauth">重新授权</button>
     </div>
   </div>
 </Base>
+
+<script>
+  import { apiGet, type ConsoleAccount, type Market } from "../../lib/api";
+  import { applyLocale, readLocale } from "../../lib/i18n";
+  import { esc, pill } from "../../lib/markup";
+
+  type BrokerPayload = {
+    connected: boolean;
+    broker: string | null;
+    brokers: Array<{ id: string; name: { zh: string; en: string }; ready: boolean }>;
+    accounts: ConsoleAccount[];
+  };
+
+  function marketTone(markets: Market[]): Market {
+    return markets[0] ?? "us";
+  }
+
+  void apiGet<BrokerPayload>("/api/user/broker").then((data) => {
+    const list = document.getElementById("broker-list");
+    const accounts = document.getElementById("account-list");
+    if (list) {
+      list.innerHTML = data.brokers
+        .map((item) => {
+          const on = data.connected && data.broker === item.id;
+          const blocked = data.connected && !on;
+          const actions = on
+            ? `<span class="pill" data-tone="ok"><i class="pill-dot" aria-hidden="true"></i><span data-i18n="connected">已连接</span></span>
+               <button class="btn ghost" type="button" data-i18n="disconnect">断开</button>`
+            : `<button class="btn" type="button"${blocked ? " disabled" : ""} data-i18n="connect">去连接</button>`;
+          return `<div class="setting">
+            <b class="grow" data-zh="${esc(item.name.zh)}" data-en="${esc(item.name.en)}">${esc(item.name.zh)}</b>
+            ${actions}
+          </div>`;
+        })
+        .join("");
+    }
+    if (accounts) {
+      accounts.innerHTML = data.accounts
+        .map((acc) => {
+          const tone = marketTone(acc.markets);
+          return `<label class="account-row">
+            <input type="checkbox"${acc.included ? " checked" : ""} />
+            <span class="grow">${esc(acc.mask)}</span>
+            ${pill(tone)}
+          </label>`;
+        })
+        .join("");
+    }
+    applyLocale(readLocale());
+  });
+</script>

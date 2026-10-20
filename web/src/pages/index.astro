@@ -1,7 +1,5 @@
 ---
-import Label from "../components/Label.astro";
 import Base from "../layouts/Base.astro";
-import { avatarHue, formatSubscribers, publishers } from "../lib/publishers";
 ---
 <Base title="发现 · Wire" heading="发现" headingKey="discover" titleKey="title_discover" active="discover">
   <input
@@ -19,45 +17,24 @@ import { avatarHue, formatSubscribers, publishers } from "../lib/publishers";
     <button class="chip" type="button" data-market="us" data-i18n="market_us">美股</button>
     <button class="chip" type="button" data-market="hk" data-i18n="market_hk">港股</button>
     <span style="flex:1"></span>
-    <a class="btn ghost" href="/publisher/apply" data-i18n="become_publisher">成为发布者</a>
+    <a class="btn ghost" href="/user/apply" data-i18n="become_publisher" data-auth-in>成为发布者</a>
   </div>
 
-  <div class="issue-list" id="list">
-    {publishers.map((p) => {
-      const me = p.handle === "demo";
-      return (
-      <a
-        class="issue"
-        href={`/publishers/${p.handle}`}
-        data-name={`${p.name} ${p.handle} ${p.bio.zh} ${p.bio.en}`}
-        data-markets={p.markets.join(",")}
-        {...(me ? { "data-me-row": "" } : {})}
-      >
-        <div class="issue-main">
-          <span class="avatar" style={`--h:${avatarHue(p.handle)}`} {...(me ? { "data-me-avatar": "" } : {})}>{p.name.slice(0, 1)}</span>
-          <div class="who">
-            <b {...(me ? { "data-me-name": "" } : {})}>{p.name}</b>
-            <span class="bio" data-zh={p.bio.zh} data-en={p.bio.en} {...(me ? { "data-me-bio": "" } : {})}>{p.bio.zh}</span>
-          </div>
-        </div>
-        <div class="pills hide-sm">
-          {p.markets.map((m) => <Label tone={m} />)}
-        </div>
-        <div class={`col ${p.ytd.startsWith("-") ? "down" : "up"}`}>{p.ytd}</div>
-        <div class="col hide-sm">{formatSubscribers(p.subscribers)}</div>
-        <div class="col">¥{p.price}</div>
-      </a>
-      );
-    })}
-  </div>
+  <div class="issue-list" id="list"></div>
   <p class="empty hidden" id="empty" data-i18n="no_matches">没有匹配的发布者</p>
 </Base>
 
 <script>
+  import { getUsers, getUser, type PublisherCard } from "../lib/api";
+  import { applyLocale, readLocale } from "../lib/i18n";
+  import { esc, marketPills, toneClass } from "../lib/markup";
+  import { avatarHue, formatSubscribers } from "../lib/publishers";
+
   const q = document.getElementById("q") as HTMLInputElement | null;
   const list = document.getElementById("list");
   const chips = document.getElementById("markets");
   let market = "all";
+  let meHandle = "";
 
   function apply() {
     if (!list) return;
@@ -75,6 +52,32 @@ import { avatarHue, formatSubscribers, publishers } from "../lib/publishers";
     document.getElementById("empty")?.classList.toggle("hidden", shown > 0);
   }
 
+  function render(rows: PublisherCard[]) {
+    if (!list) return;
+    list.innerHTML = rows
+      .map((p) => {
+        const me = p.handle === meHandle;
+        const ytdClass = toneClass(p.ytd);
+        const letter = esc([...p.name][0] ?? "?");
+        return `<a class="issue" href="/users/${esc(p.handle)}" data-name="${esc(`${p.name} ${p.handle} ${p.bio.zh} ${p.bio.en}`)}" data-markets="${esc(p.markets.join(","))}"${me ? " data-me-row" : ""}>
+          <div class="issue-main">
+            <span class="avatar" style="--h:${avatarHue(p.handle)}"${me ? " data-me-avatar" : ""}>${letter}</span>
+            <div class="who">
+              <b${me ? " data-me-name" : ""}>${esc(p.name)}</b>
+              <span class="bio" data-zh="${esc(p.bio.zh)}" data-en="${esc(p.bio.en)}"${me ? " data-me-bio" : ""}>${esc(p.bio.zh)}</span>
+            </div>
+          </div>
+          <div class="pills hide-sm">${marketPills(p.markets)}</div>
+          <div class="col ${ytdClass}">${esc(p.ytd)}</div>
+          <div class="col hide-sm">${formatSubscribers(p.subscribers)}</div>
+          <div class="col">¥${p.price}</div>
+        </a>`;
+      })
+      .join("");
+    apply();
+    applyLocale(readLocale());
+  }
+
   q?.addEventListener("input", apply);
   chips?.addEventListener("click", (event) => {
     const btn = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-market]");
@@ -82,5 +85,15 @@ import { avatarHue, formatSubscribers, publishers } from "../lib/publishers";
     market = btn.dataset.market ?? "all";
     chips.querySelectorAll(".chip").forEach((el) => el.classList.toggle("is-on", el === btn));
     apply();
+  });
+
+  void Promise.all([
+    getUsers(),
+    getUser().catch(() => null),
+  ]).then(([payload, user]) => {
+    meHandle = user?.handle ?? "";
+    render(payload.users);
+  }).catch(() => {
+    document.getElementById("empty")?.classList.remove("hidden");
   });
 </script>

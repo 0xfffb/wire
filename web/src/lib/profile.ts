@@ -44,6 +44,7 @@ export function writeProfile(draft: ProfileDraft) {
 }
 
 export function applyProfile() {
+  if (document.documentElement.getAttribute("data-auth") !== "in") return;
   const profile = readProfile();
   const locale = document.documentElement.getAttribute("data-locale") === "en" ? "en" : "zh";
   const bio = locale === "en" ? profile.bioEn : profile.bioZh;
@@ -85,6 +86,8 @@ export function applyUser(user: CurrentUser) {
     bioEn: user.bioEn,
     avatar: current.avatar,
   });
+  document.documentElement.setAttribute("data-auth", "in");
+  document.documentElement.setAttribute("data-publish", user.publishStatus);
   for (const el of document.querySelectorAll<HTMLElement>("[data-me-handle]")) {
     el.textContent = `@${user.handle}`;
   }

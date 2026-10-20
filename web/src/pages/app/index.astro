@@ -1,33 +1,50 @@
 ---
-import Label from "../../components/Label.astro";
 import Base from "../../layouts/Base.astro";
-import { avatarHue, publishers } from "../../lib/publishers";
-
-const mine = publishers
-  .filter((p) => p.handle === "demo" || p.handle === "north")
-  .map((p) => ({ ...p, daysLeft: p.handle === "demo" ? 18 : 6 }));
 ---
 <Base title="我的订阅 · Wire" heading="我的订阅" headingKey="subscriptions" titleKey="title_subs" active="app">
-  <div class="issue-list">
-    {mine.map((p) => {
-      const me = p.handle === "demo";
-      return (
-      <a class="issue" href={`/publishers/${p.handle}/sub`}>
-        <div class="issue-main">
-          <span class="avatar" style={`--h:${avatarHue(p.handle)}`} {...(me ? { "data-me-avatar": "" } : {})}>{p.name.slice(0, 1)}</span>
-          <div class="who">
-            <b {...(me ? { "data-me-name": "" } : {})}>{p.name}</b>
-            <span class="bio">@{p.handle}</span>
-          </div>
-        </div>
-        <div class="pills hide-sm">
-          {p.markets.map((m) => <Label tone={m} />)}
-        </div>
-        <div class={`col ${p.ytd.startsWith("-") ? "down" : "up"}`}>{p.ytd}</div>
-        <div class="col hide-sm" data-i18n="days_left" data-n={String(p.daysLeft)}>剩余 {p.daysLeft} 天</div>
-        <div class="col" data-i18n="subscribed">已订</div>
-      </a>
-      );
-    })}
-  </div>
+  <div class="issue-list" id="subs-list"></div>
+  <p class="empty hidden" id="subs-empty" data-i18n="no_matches">没有匹配的发布者</p>
 </Base>
+
+<script>
+  import { ApiError, getSubscriptions, getUser, type PublisherCard } from "../../lib/api";
+  import { applyLocale, readLocale } from "../../lib/i18n";
+  import { esc, marketPills, toneClass } from "../../lib/markup";
+  import { avatarHue } from "../../lib/publishers";
+
+  const list = document.getElementById("subs-list");
+  const empty = document.getElementById("subs-empty");
+
+  function render(rows: PublisherCard[], meHandle: string) {
+    if (!list) return;
+    list.innerHTML = rows
+      .map((p) => {
+        const me = p.handle === meHandle;
+        const ytdClass = toneClass(p.ytd);
+        const letter = esc([...p.name][0] ?? "?");
+        const days = p.daysLeft ?? 0;
+        return `<a class="issue" href="/users/${esc(p.handle)}/sub">
+          <div class="issue-main">
+            <span class="avatar" style="--h:${avatarHue(p.handle)}"${me ? " data-me-avatar" : ""}>${letter}</span>
+            <div class="who">
+              <b${me ? " data-me-name" : ""}>${esc(p.name)}</b>
+              <span class="bio">@${esc(p.handle)}</span>
+            </div>
+          </div>
+          <div class="pills hide-sm">${marketPills(p.markets)}</div>
+          <div class="col ${ytdClass}">${esc(p.ytd)}</div>
+          <div class="col hide-sm" data-i18n="days_left" data-n="${String(days)}">剩余 ${days} 天</div>
+          <div class="col" data-i18n="subscribed">已订</div>
+        </a>`;
+      })
+      .join("");
+    empty?.classList.toggle("hidden", rows.length > 0);
+    applyLocale(readLocale());
+  }
+
+  void Promise.all([getSubscriptions(), getUser().catch(() => null)])
+    .then(([payload, user]) => render(payload.users, user?.handle ?? ""))
+    .catch((error) => {
+      if (error instanceof ApiError && error.status === 401) location.replace("/login");
+    });
+</script>

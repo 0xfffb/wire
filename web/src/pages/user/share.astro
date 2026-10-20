@@ -1,31 +1,80 @@
 ---
-import PublisherGate from "../../components/PublisherGate.astro";
-import PublisherTop from "../../components/PublisherTop.astro";
+import UserGate from "../../components/UserGate.astro";
+import UserTop from "../../components/UserTop.astro";
 import Base from "../../layouts/Base.astro";
-import { consoleMe } from "../../lib/console";
 ---
 <Base title="披露 · Wire" heading="披露" headingKey="nav_share" titleKey="title_share" active="share">
-  <PublisherGate />
-  <PublisherTop slot="topbar" />
+  <UserGate />
+  <UserTop slot="topbar" />
 
   <div class="page">
     <div class="well">
       <div class="setting">
-        <span class="grow" data-i18n="audience">受众</span>
-        <div class="toolbar" style="padding:0;gap:4px">
-          <button class:list={["chip", consoleMe.policy.audience === "public" && "is-on"]} type="button" data-i18n="audience_public">公开主页</button>
-          <button class:list={["chip", consoleMe.policy.audience === "subs" && "is-on"]} type="button" data-i18n="audience_subs">仅订阅者</button>
-        </div>
+        <span class="meta">
+          <b data-i18n="listed">出现在发现</b>
+          <small data-i18n="listed_hint">关闭后不会出现在发现里，知道用户名仍可打开主页。</small>
+        </span>
+        <button class="switch is-on" type="button" id="listed" aria-pressed="true" data-i18n="listed" data-i18n-attr="aria-label"></button>
+      </div>
+      <div class="setting">
+        <span class="meta">
+          <b data-i18n="sub_price">订阅金额</b>
+          <small data-i18n="sub_price_hint">每 30 天，1–999 元。已有订阅不受影响。</small>
+        </span>
+        <label class="price-edit">
+          <span>¥</span>
+          <input id="price" type="number" min="1" max="999" step="1" inputmode="numeric" />
+        </label>
       </div>
     </div>
   </div>
 </Base>
 
 <script>
-  const audience = document.querySelectorAll<HTMLButtonElement>(".setting .chip");
-  audience.forEach((el) => {
-    el.addEventListener("click", () => {
-      audience.forEach((btn) => btn.classList.toggle("is-on", btn === el));
-    });
+  import { apiGet, apiSend } from "../../lib/api";
+
+  type Share = { listed: boolean; price: number };
+
+  const listed = document.getElementById("listed");
+  const price = document.getElementById("price") as HTMLInputElement | null;
+  let saved = 29;
+
+  function paint(data: Share) {
+    listed?.classList.toggle("is-on", data.listed);
+    listed?.setAttribute("aria-pressed", data.listed ? "true" : "false");
+    saved = data.price;
+    if (price) price.value = String(data.price);
+  }
+
+  function commitPrice() {
+    if (!price) return;
+    const next = Math.round(price.valueAsNumber);
+    if (!Number.isInteger(next) || next < 1 || next > 999) {
+      price.value = String(saved);
+      return;
+    }
+    if (next === saved) {
+      price.value = String(saved);
+      return;
+    }
+    price.value = String(next);
+    void apiSend<Share>("/api/user/share", "PUT", { price: next }).then(paint);
+  }
+
+  void apiGet<Share>("/api/user/share").then(paint);
+
+  listed?.addEventListener("click", () => {
+    const next = !listed.classList.contains("is-on");
+    listed.classList.toggle("is-on", next);
+    listed.setAttribute("aria-pressed", next ? "true" : "false");
+    void apiSend<Share>("/api/user/share", "PUT", { listed: next }).then(paint);
+  });
+
+  price?.addEventListener("change", commitPrice);
+  price?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      price.blur();
+    }
   });
 </script>

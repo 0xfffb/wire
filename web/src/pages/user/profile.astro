@@ -1,16 +1,14 @@
 ---
-import PublisherTop from "../../components/PublisherTop.astro";
+import UserTop from "../../components/UserTop.astro";
 import Base from "../../layouts/Base.astro";
-import { avatarHue } from "../../lib/publishers";
-import { consoleMe } from "../../lib/console";
 ---
 <Base title="资料 · Wire" heading="资料" headingKey="nav_profile" titleKey="title_profile" active="profile">
-  <PublisherTop slot="topbar" />
+  <UserTop slot="topbar" />
 
   <div class="page">
     <form class="form wide" id="profile-form" onsubmit="return false">
       <div class="identity" style="margin-bottom:4px">
-        <span class="avatar lg" data-me-avatar style={`--h:${avatarHue(consoleMe.handle)}`}>{consoleMe.name.slice(0, 1)}</span>
+        <span class="avatar lg" data-me-avatar>—</span>
         <div>
           <button class="btn ghost" type="button" id="avatar-btn" data-i18n="change_avatar">更换头像</button>
           <input id="avatar-file" type="file" accept="image/*" hidden />
@@ -18,22 +16,22 @@ import { consoleMe } from "../../lib/console";
       </div>
       <label>
         <span data-i18n="display_name">显示名</span>
-        <input id="profile-name" type="text" name="name" value={consoleMe.name} maxlength="24" autocomplete="nickname" />
+        <input id="profile-name" type="text" name="name" maxlength="24" autocomplete="nickname" />
       </label>
       <label>
         <span data-i18n="username">用户名</span>
         <div class="handle-field">
           <span class="handle-prefix">@</span>
-          <input id="profile-handle" type="text" value={consoleMe.handle} disabled />
+          <input id="profile-handle" type="text" disabled />
         </div>
       </label>
       <label>
         <span data-i18n="bio_label">简介</span>
-        <textarea id="profile-bio-zh" rows="3">{consoleMe.bio.zh}</textarea>
+        <textarea id="profile-bio-zh" rows="3"></textarea>
       </label>
       <label>
         <span>Bio</span>
-        <textarea id="profile-bio-en" rows="3">{consoleMe.bio.en}</textarea>
+        <textarea id="profile-bio-en" rows="3"></textarea>
       </label>
       <button class="btn" type="submit" data-i18n="save_profile">保存</button>
       <p class="note" id="profile-saved" hidden data-i18n="profile_saved">已保存，主页会用这份资料。</p>

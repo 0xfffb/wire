@@ -1,10 +1,10 @@
 ---
 import Prefs from "../components/Prefs.astro";
-import { publisherNav } from "../lib/console";
+import { userNav } from "../lib/console";
 import "../styles/global.css";
 import type { MessageKey } from "../lib/i18n";
 
-type PublisherId = (typeof publisherNav)[number]["id"];
+type UserNavId = (typeof userNav)[number]["id"];
 
 interface Props {
   title?: string;
@@ -12,7 +12,7 @@ interface Props {
   heading?: string;
   headingKey?: MessageKey;
   titleKey?: MessageKey;
-  active?: "discover" | "app" | "login" | "apply" | PublisherId;
+  active?: "discover" | "app" | "login" | "apply" | UserNavId;
   auth?: boolean;
   meName?: boolean;
 }
@@ -29,7 +29,7 @@ const {
 } = Astro.props;
 ---
 <!doctype html>
-<html lang="zh-CN" data-theme="dark" data-theme-pref="system" data-locale="zh" data-publish="none" data-title-key={titleKey}>
+<html lang="zh-CN" data-theme="dark" data-theme-pref="system" data-locale="zh" data-auth="" data-publish="none" data-title-key={titleKey}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -56,15 +56,6 @@ const {
           if (l !== "en" && l !== "zh") l = "zh";
           document.documentElement.setAttribute("data-locale", l);
           document.documentElement.lang = l === "en" ? "en" : "zh-CN";
-          var p = "none";
-          try {
-            var raw = localStorage.getItem("wire.publish");
-            if (raw) {
-              var o = JSON.parse(raw);
-              if (o && (o.status === "pending" || o.status === "approved" || o.status === "none")) p = o.status;
-            }
-          } catch (e2) {}
-          document.documentElement.setAttribute("data-publish", p);
         } catch (e) {}
       })();
     </script>
@@ -92,7 +83,7 @@ const {
             <a class={active === "app" ? "is-active" : ""} href="/app" data-i18n="subscriptions">我的订阅</a>
             <div class="nav-section" data-publish-full>
               <div class="nav-label" data-i18n="publish">发布</div>
-              {publisherNav.map((item) => (
+              {userNav.map((item) => (
                 <a class={active === item.id ? "is-active" : ""} href={item.href} data-i18n={item.key}>
                   {item.zh}
                 </a>
@@ -100,7 +91,7 @@ const {
             </div>
             <div class="nav-section" data-publish-apply>
               <div class="nav-label" data-i18n="publish">发布</div>
-              <a class={active === "apply" ? "is-active" : ""} href="/publisher/apply" data-i18n="nav_apply">申请发布</a>
+              <a class={active === "apply" ? "is-active" : ""} href="/user/apply" data-i18n="nav_apply">申请发布</a>
             </div>
           </nav>
           <div class="sidebar-end">
@@ -108,16 +99,17 @@ const {
               <Prefs />
             </div>
             <nav class="side-nav">
-              <div class="side-account-row">
-                <a class:list={["side-account", active === "profile" && "is-active"]} href="/publisher/profile">
-                  <span class="avatar" data-me-avatar>阿</span>
+              <div class="side-account-row" data-auth-in>
+                <a class:list={["side-account", active === "profile" && "is-active"]} href="/user/profile">
+                  <span class="avatar" data-me-avatar></span>
                   <span>
-                    <b data-me-name>阿木</b>
-                    <span data-me-handle>@demo</span>
+                    <b data-me-name></b>
+                    <span data-me-handle></span>
                   </span>
                 </a>
                 <a class="side-logout" href="/login" data-i18n="logout">退出</a>
               </div>
+              <a class="side-login" data-auth-out href="/login" data-i18n="login">登录</a>
             </nav>
             <div class="sidebar-legal">
               <a href="/legal/terms" data-i18n="terms">条款</a>

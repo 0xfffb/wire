@@ -2,6 +2,9 @@
 const API_BASE = import.meta.env.PUBLIC_API_BASE ?? "";
 
 export type PublishStatus = "none" | "pending" | "approved";
+export type Market = "us" | "hk";
+export type Copy = { zh: string; en: string };
+export type Access = "locked" | "preview" | "full" | "empty";
 
 export type CurrentUser = {
   id: string;
@@ -12,6 +15,66 @@ export type CurrentUser = {
   bioEn: string;
   publishStatus: PublishStatus;
   brokerConnected: boolean;
+};
+
+export type PublisherCard = {
+  handle: string;
+  name: string;
+  bio: Copy;
+  markets: Market[];
+  ytd: string;
+  subscribers: number;
+  price: number;
+  daysLeft?: number;
+};
+
+export type PublicHolding = {
+  code: string;
+  name: Copy;
+  side: "long" | "short" | "flat" | null;
+  qty: string | null;
+  cost: string | null;
+  value: string | null;
+  pl: string | null;
+};
+
+export type PublicFill = {
+  time: string;
+  code: string;
+  name: Copy;
+  currency: string;
+  side: "buy" | "sell" | null;
+  qty: string | null;
+  price: string | null;
+  amount: string | null;
+};
+
+export type UserHome = PublisherCard & {
+  access: Access;
+  subscribed: boolean;
+  daysLeft: number | null;
+  me: boolean;
+  holdings: PublicHolding[];
+  fills: PublicFill[];
+};
+
+export type ConsoleHolding = {
+  code: string;
+  name: Copy;
+  side: "long" | "short" | "flat";
+  qty: string;
+  cost: string;
+  value: string;
+  pl: string;
+  account: string;
+  market: Market | "cash";
+};
+
+export type ConsoleAccount = {
+  id: string;
+  mask: string;
+  markets: Market[];
+  included: boolean;
 };
 
 export class ApiError extends Error {
@@ -56,6 +119,30 @@ export function getHealth() {
   return apiGet<{ ok: boolean }>("/api/health");
 }
 
+let userRequest: Promise<CurrentUser> | undefined;
+
 export function getUser() {
-  return apiGet<CurrentUser>("/api/user");
+  if (!userRequest) {
+    userRequest = apiGet<CurrentUser>("/api/user").catch((error) => {
+      userRequest = undefined;
+      throw error;
+    });
+  }
+  return userRequest;
+}
+
+export function forgetUser() {
+  userRequest = undefined;
+}
+
+export function getUsers() {
+  return apiGet<{ users: PublisherCard[] }>("/api/users");
+}
+
+export function getUserHome(handle: string) {
+  return apiGet<UserHome>(`/api/users/${encodeURIComponent(handle)}`);
+}
+
+export function getSubscriptions() {
+  return apiGet<{ users: PublisherCard[] }>("/api/subscriptions");
 }

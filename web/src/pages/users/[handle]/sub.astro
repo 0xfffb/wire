@@ -1,15 +1,12 @@
 ---
-import PublisherHome from "../../../components/PublisherHome.astro";
+import UserHome from "../../../components/UserHome.astro";
 import Base from "../../../layouts/Base.astro";
-import { publisherByHandle, publishers } from "../../../lib/publishers";
 
 export function getStaticPaths() {
-  return publishers.map((p) => ({ params: { handle: p.handle } }));
+  return [{ params: { handle: "_" } }];
 }
-
-const publisher = publisherByHandle(Astro.params.handle);
 ---
-<Base title={`${publisher.name} · Wire`} heading={publisher.name} active="app" meName={publisher.handle === "demo"}>
+<Base title="Wire" heading="" active="app">
   <a slot="topbar" class="crumb" href="/app" data-i18n="subscriptions">我的订阅</a>
-  <PublisherHome publisher={publisher} subscribed />
+  <UserHome />
 </Base>

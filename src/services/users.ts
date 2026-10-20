@@ -34,9 +34,13 @@ type UserViewRow = {
   display_name: string;
   bio_zh: string;
   bio_en: string;
+  publish_status: PublishStatus | null;
+  broker_connected: number;
 };
 
 function viewFromRow(row: UserViewRow): UserView {
+  const publishStatus =
+    row.publish_status === "pending" || row.publish_status === "approved" ? row.publish_status : "none";
   return {
     id: row.id,
     email: row.email,
@@ -44,8 +48,8 @@ function viewFromRow(row: UserViewRow): UserView {
     name: row.display_name,
     bioZh: row.bio_zh,
     bioEn: row.bio_en,
-    publishStatus: "none",
-    brokerConnected: false,
+    publishStatus,
+    brokerConnected: row.broker_connected === 1,
   };
 }
 
@@ -84,9 +88,12 @@ class Users {
   async getView(id: string) {
     const row = await this.db
       .prepare(
-        `SELECT u.id, u.email, u.handle, p.display_name, p.bio_zh, p.bio_en
+        `SELECT u.id, u.email, u.handle, p.display_name, p.bio_zh, p.bio_en,
+                pub.status AS publish_status,
+                CASE WHEN EXISTS (SELECT 1 FROM broker_links b WHERE b.user_id = u.id) THEN 1 ELSE 0 END AS broker_connected
          FROM users u
          JOIN profiles p ON p.user_id = u.id
+         LEFT JOIN publishers pub ON pub.user_id = u.id
          WHERE u.id = ?
          LIMIT 1`,
       )

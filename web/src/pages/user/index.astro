@@ -1,42 +1,76 @@
 ---
-import Label from "../../components/Label.astro";
-import PublisherGate from "../../components/PublisherGate.astro";
-import PublisherTop from "../../components/PublisherTop.astro";
+import UserGate from "../../components/UserGate.astro";
+import UserTop from "../../components/UserTop.astro";
 import Base from "../../layouts/Base.astro";
-import { brokers, consoleMe } from "../../lib/console";
-
-const current = brokers.find((item) => item.id === consoleMe.broker);
 ---
 <Base title="概览 · Wire" heading="概览" headingKey="nav_overview" titleKey="title_overview" active="overview">
-  <PublisherGate />
-  <PublisherTop slot="topbar" />
+  <UserGate />
+  <UserTop slot="topbar" />
 
   <div class="page">
-    <div class="props">
-      <div class="prop"><span data-i18n="connection">连接</span><b data-i18n="connected">已连接</b></div>
-      <div class="prop">
-        <span data-i18n="broker">券商</span>
-        <b data-zh={current?.name.zh} data-en={current?.name.en}>{current?.name.zh}</b>
-      </div>
-      <div class="prop"><span data-i18n="accounts">纳入账户</span><b>{consoleMe.accounts.filter((a) => a.on).length}</b></div>
-      <div class="prop"><span data-i18n="ytd">今年收益</span><b class="up">{consoleMe.ytd}</b></div>
-      <div class="prop"><span data-i18n="symbols">标的数</span><b>{consoleMe.symbols}</b></div>
-      <div class="prop"><span data-i18n="today_events">今日变动</span><b>{consoleMe.todayEvents}</b></div>
+    <div class="props" id="overview-props">
+      <div class="prop"><span data-i18n="connection">连接</span><b data-i18n="disconnected">未连接</b></div>
+      <div class="prop"><span data-i18n="broker">券商</span><b>—</b></div>
+      <div class="prop"><span data-i18n="accounts">纳入账户</span><b>0</b></div>
+      <div class="prop"><span data-i18n="ytd">今年收益</span><b>—</b></div>
+      <div class="prop"><span data-i18n="symbols">标的数</span><b>0</b></div>
+      <div class="prop"><span data-i18n="today_events">今日变动</span><b>0</b></div>
     </div>
     <h2 data-i18n="activity">最近变动</h2>
     <div class="well">
-      <ul class="feed">
-        {consoleMe.events.map((item) => (
-          <li>
-            <span class="feed-main">
-              {item.kind === "fill" ? <Label tone="fill" /> : null}
-              {item.side === "buy" ? <Label tone="buy" /> : item.side === "sell" ? <Label tone="sell" /> : null}
-              <span data-zh={item.text.zh} data-en={item.text.en}>{item.text.zh}</span>
-            </span>
-            <time data-zh={item.time.zh} data-en={item.time.en}>{item.time.zh}</time>
-          </li>
-        ))}
-      </ul>
+      <ul class="feed" id="overview-feed"></ul>
     </div>
   </div>
 </Base>
+
+<script>
+  import { apiGet } from "../../lib/api";
+  import { applyLocale, readLocale } from "../../lib/i18n";
+  import { esc, pill, sidePill, toneClass } from "../../lib/markup";
+
+  type Overview = {
+    connected: boolean;
+    broker: string | null;
+    accountsIncluded: number;
+    ytd: string;
+    symbols: number;
+    todayEvents: number;
+    events: Array<{
+      kind: "fill";
+      side: "buy" | "sell";
+      text: { zh: string; en: string };
+      time: { zh: string; en: string };
+    }>;
+  };
+
+  const names: Record<string, { zh: string; en: string }> = {
+    futu: { zh: "富途", en: "Futu" },
+  };
+
+  void apiGet<Overview>("/api/user/overview").then((data) => {
+    const props = document.getElementById("overview-props");
+    const feed = document.getElementById("overview-feed");
+    const broker = data.broker ? names[data.broker] : null;
+    const ytdClass = toneClass(data.ytd);
+    if (props) {
+      props.innerHTML = `
+        <div class="prop"><span data-i18n="connection">连接</span><b data-i18n="${data.connected ? "connected" : "disconnected"}">${data.connected ? "已连接" : "未连接"}</b></div>
+        <div class="prop"><span data-i18n="broker">券商</span><b${broker ? ` data-zh="${esc(broker.zh)}" data-en="${esc(broker.en)}"` : ""}>${broker ? esc(broker.zh) : "—"}</b></div>
+        <div class="prop"><span data-i18n="accounts">纳入账户</span><b>${data.accountsIncluded}</b></div>
+        <div class="prop"><span data-i18n="ytd">今年收益</span><b class="${ytdClass}">${esc(data.ytd)}</b></div>
+        <div class="prop"><span data-i18n="symbols">标的数</span><b>${data.symbols}</b></div>
+        <div class="prop"><span data-i18n="today_events">今日变动</span><b>${data.todayEvents}</b></div>`;
+    }
+    if (feed) {
+      feed.innerHTML = data.events
+        .map(
+          (item) => `<li>
+            <span class="feed-main">${pill("fill")}${sidePill(item.side)}<span data-zh="${esc(item.text.zh)}" data-en="${esc(item.text.en)}">${esc(item.text.zh)}</span></span>
+            <time data-zh="${esc(item.time.zh)}" data-en="${esc(item.time.en)}">${esc(item.time.zh)}</time>
+          </li>`,
+        )
+        .join("");
+    }
+    applyLocale(readLocale());
+  });
+</script>

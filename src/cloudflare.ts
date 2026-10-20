@@ -10,6 +10,7 @@ type CloudflareEnv = {
   DB: D1Database;
   KV: KVNamespace;
   QUEUE: Queue<QueueMessage>;
+  ASSETS: Fetcher;
 };
 
 function fetch(request: Request, env: CloudflareEnv, ctx: ExecutionContext) {

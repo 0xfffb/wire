@@ -1,20 +1,13 @@
 ---
-import Label from "../../components/Label.astro";
-import PublisherGate from "../../components/PublisherGate.astro";
-import PublisherTop from "../../components/PublisherTop.astro";
+import UserGate from "../../components/UserGate.astro";
+import UserTop from "../../components/UserTop.astro";
 import Base from "../../layouts/Base.astro";
-import { consoleMe } from "../../lib/console";
 ---
 <Base title="持仓 · Wire" heading="持仓" headingKey="nav_holdings" titleKey="title_holdings" active="holdings">
-  <PublisherGate />
-  <PublisherTop slot="topbar" />
+  <UserGate />
+  <UserTop slot="topbar" />
 
-  <div class="toolbar" id="accounts">
-    <button class="chip is-on" type="button" data-account="all" data-i18n="all">全部</button>
-    {consoleMe.accounts.filter((a) => a.on).map((acc) => (
-      <button class="chip" type="button" data-account={acc.id}>{acc.id}</button>
-    ))}
-  </div>
+  <div class="toolbar" id="accounts"></div>
 
   <div class="page" style="padding-top:0">
     <div class="well">
@@ -29,46 +22,55 @@ import { consoleMe } from "../../lib/console";
             <th class="num" data-i18n="pnl">盈亏</th>
           </tr>
         </thead>
-        <tbody>
-          {consoleMe.holdings.map((row) => (
-            <tr data-account={row.account}>
-              <td>
-                <strong>{row.code}.<span data-zh={row.name.zh} data-en={row.name.en}>{row.name.zh}</span></strong>
-              </td>
-              <td>
-                {row.side === "long" ? (
-                  <Label tone="buy" />
-                ) : row.side === "short" ? (
-                  <Label tone="sell" />
-                ) : (
-                  <span class="dash">—</span>
-                )}
-              </td>
-              <td class="num">{row.qty}</td>
-              <td class="num hide-sm">{row.cost}</td>
-              <td class="num">{row.value}</td>
-              <td class={`num ${row.pl.startsWith("+") ? "up" : row.pl.startsWith("-") ? "down" : ""}`}>
-                {row.pl}
-              </td>
-            </tr>
-          ))}
-        </tbody>
+        <tbody id="holdings-body"></tbody>
       </table>
     </div>
   </div>
 </Base>
 
 <script>
+  import { apiGet, type ConsoleAccount, type ConsoleHolding } from "../../lib/api";
+  import { applyLocale, readLocale } from "../../lib/i18n";
+  import { esc, numClass, sidePill, symbolCell } from "../../lib/markup";
+
   const chips = document.getElementById("accounts");
+  const body = document.getElementById("holdings-body");
   let account = "all";
+
+  function filterRows() {
+    for (const row of document.querySelectorAll<HTMLElement>("tr[data-account]")) {
+      row.classList.toggle("hidden", account !== "all" && row.dataset.account !== account);
+    }
+  }
 
   chips?.addEventListener("click", (event) => {
     const btn = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-account]");
     if (!btn) return;
     account = btn.dataset.account ?? "all";
     chips.querySelectorAll(".chip").forEach((el) => el.classList.toggle("is-on", el === btn));
-    for (const row of document.querySelectorAll<HTMLElement>("tr[data-account]")) {
-      row.classList.toggle("hidden", account !== "all" && row.dataset.account !== account);
+    filterRows();
+  });
+
+  void apiGet<{ accounts: ConsoleAccount[]; holdings: ConsoleHolding[] }>("/api/user/holdings").then((data) => {
+    if (chips) {
+      chips.innerHTML = `<button class="chip is-on" type="button" data-account="all" data-i18n="all">全部</button>${data.accounts
+        .map((acc) => `<button class="chip" type="button" data-account="${esc(acc.mask)}">${esc(acc.mask)}</button>`)
+        .join("")}`;
     }
+    if (body) {
+      body.innerHTML = data.holdings
+        .map(
+          (row) => `<tr data-account="${esc(row.account)}">
+            <td>${symbolCell(row.code, row.name)}</td>
+            <td>${sidePill(row.side)}</td>
+            <td class="num">${esc(row.qty)}</td>
+            <td class="num hide-sm">${esc(row.cost)}</td>
+            <td class="num">${esc(row.value)}</td>
+            <td ${numClass(row.pl)}>${esc(row.pl)}</td>
+          </tr>`,
+        )
+        .join("");
+    }
+    applyLocale(readLocale());
   });
 </script>

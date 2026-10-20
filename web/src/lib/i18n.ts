@@ -1,4 +1,4 @@
-import { ApiError, apiSend, getUser } from "./api";
+import { ApiError, apiSend, forgetUser, getUser } from "./api";
 import { applyProfile, applyUser } from "./profile";
 
 export type Locale = "zh" | "en";
@@ -81,13 +81,14 @@ const zh = {
   buy: "买入",
   sell: "卖出",
   flat: "—",
-  gated: "未订阅最多看 6 条。前 3 条数字已模糊，后 3 条整行模糊。",
+  gated: "未订阅最多看 3 条仓位，数字为 **，并补齐到 6 条。",
+  holdings_empty: "暂无仓位。",
   masked_only: "账户号始终掩码。",
   subscribe: "订阅",
   subscribe_price: "¥{price} / 30 天。到期后需再订。",
   subscribe_30: "订阅 30 天",
   subscribe_includes: "开通后可见方向、数量、市值和盈亏。",
-  sub_left: "剩余 18 天。到期后需再订。",
+  sub_left: "剩余 {n} 天。到期后需再订。",
   manage_sub: "管理订阅",
   activity: "最近变动",
   trades: "交易记录",
@@ -102,6 +103,7 @@ const zh = {
   remaining: "@{handle} · 剩余 18 天",
   days_left: "剩余 {n} 天",
   no_matches: "没有匹配的发布者",
+  publisher_missing: "没有这个发布者",
   display_name: "显示名",
   bio_label: "简介",
   change_avatar: "更换头像",
@@ -132,9 +134,10 @@ const zh = {
   account: "账户",
   symbols: "标的数",
   today_events: "今日变动",
-  audience: "受众",
-  audience_public: "公开主页",
-  audience_subs: "仅订阅者",
+  listed: "出现在发现",
+  listed_hint: "关闭后不会出现在发现里，知道用户名仍可打开主页。",
+  sub_price: "订阅金额",
+  sub_price_hint: "每 30 天，1–999 元。已有订阅不受影响。",
   preview_banner: "这是订阅者将看到的主页。",
   console_note: "接口还没接，这里只定版式。",
   note_label: "备注",
@@ -221,13 +224,14 @@ const en: typeof zh = {
   buy: "Buy",
   sell: "Sell",
   flat: "—",
-  gated: "Up to 6 rows. The first 3 have numbers blurred; the next 3 are fully blurred.",
+  gated: "Unsubscribed views get up to 3 holdings, padded to 6, with ** blurred.",
+  holdings_empty: "No holdings.",
   masked_only: "Account numbers stay masked.",
   subscribe: "Subscribe",
   subscribe_price: "¥{price} / 30 days. Renew when it expires.",
   subscribe_30: "Subscribe 30 days",
   subscribe_includes: "Side, size, value, and P&L unlock after you subscribe.",
-  sub_left: "18 days left. Renew when it expires.",
+  sub_left: "{n} days left. Renew when it expires.",
   manage_sub: "Manage subscription",
   activity: "Activity",
   trades: "Trades",
@@ -242,6 +246,7 @@ const en: typeof zh = {
   remaining: "@{handle} · 18 days left",
   days_left: "{n} days left",
   no_matches: "No publishers match.",
+  publisher_missing: "Publisher not found.",
   display_name: "Display name",
   bio_label: "Bio",
   change_avatar: "Change photo",
@@ -272,9 +277,10 @@ const en: typeof zh = {
   account: "Account",
   symbols: "Names",
   today_events: "Today",
-  audience: "Audience",
-  audience_public: "Public profile",
-  audience_subs: "Subscribers only",
+  listed: "Show in Discover",
+  listed_hint: "Off: hidden from Discover. Anyone with your username can still open your page.",
+  sub_price: "Subscription price",
+  sub_price_hint: "Every 30 days, ¥1–999. Current subscriptions stay as they are.",
   preview_banner: "This is the subscriber view.",
   console_note: "API is not wired; this is layout only.",
   note_label: "Note",
@@ -440,6 +446,7 @@ export function bootUi() {
       void apiSend("/api/auth/logout", "POST")
         .catch(() => undefined)
         .then(() => {
+          forgetUser();
           location.href = "/login";
         });
     });
@@ -449,5 +456,7 @@ export function bootUi() {
     .then((user) => applyUser(user))
     .catch((error) => {
       if (!(error instanceof ApiError && error.status === 401)) return;
+      document.documentElement.setAttribute("data-auth", "out");
+      document.documentElement.setAttribute("data-publish", "none");
     });
 }

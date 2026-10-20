@@ -15,7 +15,7 @@ type SessionRecord = {
 type AuthEnv = {
   Variables: {
     deps: Deps;
-    userId: string;
+    userId?: string;
   };
 };
 
@@ -23,30 +23,41 @@ function sessionKey(token: string) {
   return `session:${token}`;
 }
 
-async function requireAuth(context: Context<AuthEnv>, next: Next) {
+async function readSession(context: Context<AuthEnv>) {
   const token = getCookie(context, SESSION_COOKIE);
-  if (!token) {
-    return context.json({ error: "unauthorized" }, 401);
-  }
+  if (!token) return null;
 
-  const raw = await context.get("deps").kv.get(sessionKey(token));
-  if (!raw) {
-    return context.json({ error: "unauthorized" }, 401);
-  }
+  const kv = context.get("deps").kv;
+  const raw = await kv.get(sessionKey(token));
+  if (!raw) return null;
 
   let session: SessionRecord;
   try {
     session = JSON.parse(raw) as SessionRecord;
   } catch {
-    return context.json({ error: "unauthorized" }, 401);
+    return null;
   }
 
   if (!session.userId || session.expiresAt <= Date.now()) {
-    await context.get("deps").kv.delete(sessionKey(token));
-    return context.json({ error: "unauthorized" }, 401);
+    await kv.delete(sessionKey(token));
+    return null;
   }
 
+  return session;
+}
+
+async function requireAuth(context: Context<AuthEnv>, next: Next) {
+  const session = await readSession(context);
+  if (!session) {
+    return context.json({ error: "unauthorized" }, 401);
+  }
   context.set("userId", session.userId);
+  await next();
+}
+
+async function optionalAuth(context: Context<{ Variables: { deps: Deps; userId?: string } }>, next: Next) {
+  const session = await readSession(context);
+  if (session) context.set("userId", session.userId);
   await next();
 }
 
@@ -80,5 +91,14 @@ async function clearSession(context: Context, kv: KvStore) {
   deleteCookie(context, SESSION_COOKIE, { path: "/" });
 }
 
-export { SESSION_COOKIE, SESSION_TTL_SEC, attachSessionCookie, clearSession, createSession, requireAuth, sessionKey };
+export {
+  SESSION_COOKIE,
+  SESSION_TTL_SEC,
+  attachSessionCookie,
+  clearSession,
+  createSession,
+  optionalAuth,
+  requireAuth,
+  sessionKey,
+};
 export type { AuthEnv, SessionRecord };

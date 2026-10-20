@@ -29,13 +29,21 @@ import Base from "../../layouts/Base.astro";
 
     <div id="apply-approved" hidden>
       <p class="lede" data-i18n="apply_ok_lede">申请已通过，可以连接券商并披露仓位。</p>
-      <a class="btn" href="/publisher" data-i18n="apply_go">去概览</a>
+      <a class="btn" href="/user" data-i18n="apply_go">去概览</a>
     </div>
   </div>
 </Base>
 
 <script>
-  import { readPublish, writePublish } from "../../lib/publish";
+  import { ApiError, apiGet, apiSend, getUser } from "../../lib/api";
+  import { applyLocale, readLocale, t } from "../../lib/i18n";
+  import { writePublish } from "../../lib/publish";
+
+  type ApplyState = {
+    status: "none" | "pending" | "approved";
+    markets: Array<"us" | "hk">;
+    note: string;
+  };
 
   const none = document.getElementById("apply-none");
   const pending = document.getElementById("apply-pending");
@@ -46,19 +54,31 @@ import Base from "../../layouts/Base.astro";
   const chips = document.getElementById("apply-markets");
   const picked = new Set<"us" | "hk">();
 
-  function show(status: "none" | "pending" | "approved") {
+  function show(status: ApplyState["status"]) {
     if (none) none.hidden = status !== "none";
     if (pending) pending.hidden = status !== "pending";
     if (approved) approved.hidden = status !== "approved";
+    document.documentElement.setAttribute("data-publish", status);
+    writePublish({ status, markets: [...picked], note: note?.value.trim() ?? "" });
   }
 
-  const current = readPublish();
-  show(current.status);
-  if (note) note.value = current.note;
-  for (const market of current.markets) {
-    picked.add(market);
-    chips?.querySelector(`[data-market="${market}"]`)?.classList.add("is-on");
+  function fill(state: ApplyState) {
+    picked.clear();
+    chips?.querySelectorAll(".chip").forEach((el) => el.classList.remove("is-on"));
+    for (const market of state.markets) {
+      picked.add(market);
+      chips?.querySelector(`[data-market="${market}"]`)?.classList.add("is-on");
+    }
+    if (note) note.value = state.note;
+    show(state.status);
   }
+
+  void getUser()
+    .then(() => apiGet<ApplyState>("/api/user/apply"))
+    .then((state) => fill(state))
+    .catch((err) => {
+      if (err instanceof ApiError && err.status === 401) location.replace("/login");
+    });
 
   chips?.addEventListener("click", (event) => {
     const btn = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-market]");
@@ -75,17 +95,31 @@ import Base from "../../layouts/Base.astro";
       if (error) error.hidden = false;
       return;
     }
-    writePublish({
-      status: "pending",
+    void apiSend<ApplyState>("/api/user/apply", "POST", {
       markets: [...picked],
       note: note?.value.trim() ?? "",
-    });
-    show("pending");
+    })
+      .then((state) => fill({ ...state, markets: [...picked], note: note?.value.trim() ?? "" }))
+      .catch((err) => {
+        if (!error) return;
+        error.hidden = false;
+        error.removeAttribute("data-i18n");
+        error.textContent = t(readLocale(), err instanceof ApiError && err.status === 401 ? "error_unauthorized" : "error_failed");
+      });
   });
 
   document.getElementById("apply-pass")?.addEventListener("click", () => {
-    const state = readPublish();
-    writePublish({ ...state, status: "approved" });
-    location.href = "/publisher";
+    void apiSend<ApplyState>("/api/user/apply/pass", "POST")
+      .then(() => {
+        writePublish({ status: "approved", markets: [...picked], note: note?.value.trim() ?? "" });
+        location.href = "/user";
+      })
+      .catch((err) => {
+        if (!error) return;
+        error.hidden = false;
+        error.removeAttribute("data-i18n");
+        error.textContent = t(readLocale(), err instanceof ApiError && err.status === 401 ? "error_unauthorized" : "error_failed");
+        applyLocale(readLocale());
+      });
   });
 </script>
