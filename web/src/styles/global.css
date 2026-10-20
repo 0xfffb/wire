@@ -19,6 +19,7 @@ html[data-theme="dark"] {
   --input-border: #3e3e44;
   --dot-us: #3caefe;
   --dot-hk: #fc7840;
+  --dot-futures: #8b7cf6;
   --accent: #5e6ad2;
   --accent-hover: #6b77db;
   --link: #7170ff;
@@ -60,6 +61,7 @@ html[data-theme="light"] {
   --input-border: #d0d2d6;
   --dot-us: #3caefe;
   --dot-hk: #fc7840;
+  --dot-futures: #8b7cf6;
   --accent: #5e6ad2;
   --accent-hover: #4f5ac4;
   --link: #5e6ad2;
@@ -533,6 +535,7 @@ html[data-publish="approved"] [data-publish-apply] {
 }
 .pill[data-tone="us"] .pill-dot { background: var(--dot-us); }
 .pill[data-tone="hk"] .pill-dot { background: var(--dot-hk); }
+.pill[data-tone="futures"] .pill-dot { background: var(--dot-futures); }
 .pill[data-tone="buy"] .pill-dot { background: var(--up); }
 .pill[data-tone="sell"] .pill-dot { background: var(--down); }
 .pill[data-tone="ok"] .pill-dot { background: var(--up); }

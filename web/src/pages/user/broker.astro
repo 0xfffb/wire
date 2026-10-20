@@ -28,9 +28,9 @@ import Base from "../../layouts/Base.astro";
 </Base>
 
 <script>
-  import { ApiError, apiGet, apiSend, type ConsoleAccount, type Market } from "../../lib/api";
+  import { ApiError, apiGet, apiSend, type ConsoleAccount } from "../../lib/api";
   import { applyLocale, readLocale, t, type MessageKey } from "../../lib/i18n";
-  import { esc, pill } from "../../lib/markup";
+  import { esc, marketPills, pill } from "../../lib/markup";
 
   type BrokerPayload = {
     connected: boolean;
@@ -71,10 +71,6 @@ import Base from "../../layouts/Base.astro";
     errorEl?.classList.add("hidden");
   }
 
-  function marketTone(markets: Market[]): Market {
-    return markets[0] ?? "us";
-  }
-
   function render(data: BrokerPayload) {
     if (list) {
       list.innerHTML = data.brokers
@@ -94,14 +90,13 @@ import Base from "../../layouts/Base.astro";
     }
     if (accounts) {
       accounts.innerHTML = data.accounts
-        .map((acc) => {
-          const tone = marketTone(acc.markets);
-          return `<label class="account-row">
+        .map(
+          (acc) => `<label class="account-row">
             <input type="checkbox" data-account="${esc(acc.id)}"${acc.included ? " checked" : ""}${data.connected ? "" : " disabled"} />
             <span class="grow">${esc(acc.mask)}</span>
-            ${acc.markets.length ? pill(tone) : ""}
-          </label>`;
-        })
+            ${marketPills(acc.markets)}
+          </label>`,
+        )
         .join("");
     }
     if (confirmBtn) confirmBtn.disabled = !data.connected;

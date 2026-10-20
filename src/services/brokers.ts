@@ -1,6 +1,6 @@
 import type { FutuBrokerage } from "../brokerage/futu";
 import type { Deps } from "../deps";
-import { parseMarkets, type Market } from "../lib/copy";
+import { isAccountMarket, parseAccountMarkets } from "../lib/copy";
 import { randomBase64Url, sha256Base64Url } from "../lib/pkce";
 import type { SqlDatabase } from "../storage/database";
 import type { KvStore } from "../storage/kv";
@@ -77,9 +77,22 @@ class Brokers {
     return new Brokers(deps.database, deps.kv, deps.brokerage.futu);
   }
 
+  async refreshAccounts(userId: string) {
+    const token = await this.accessToken(userId);
+    if (!token) return;
+    await this.upsertAccounts(userId, await this.futu.listAccounts(token));
+  }
+
   async view(userId: string) {
     const link = await this.connected(userId);
     const token = link ? await this.readToken(userId) : null;
+    if (link && token?.status !== "reauth") {
+      try {
+        await this.refreshAccounts(userId);
+      } catch {
+        /* show saved accounts */
+      }
+    }
     return {
       connected: Boolean(link),
       broker: link,
@@ -207,6 +220,19 @@ class Brokers {
     }
   }
 
+  async enqueueAllSync(queue: Queue) {
+    const { results } = await this.db
+      .prepare("SELECT id, user_id FROM accounts WHERE included = 1")
+      .all<{ id: string; user_id: string }>();
+    const messages = results.map((row) => ({
+      type: "sync" as const,
+      payload: { userId: row.user_id, accountId: row.id },
+    }));
+    for (let i = 0; i < messages.length; i += QUEUE_BATCH) {
+      await queue.sendBatch(messages.slice(i, i + QUEUE_BATCH));
+    }
+  }
+
   async enqueueSync(queue: Queue, userId: string, opts?: { includeAllIfEmpty?: boolean }) {
     if (opts?.includeAllIfEmpty) await this.includeAllIfNone(userId);
     const rows = await this.accountRows(userId);
@@ -272,7 +298,7 @@ class Brokers {
         ({
           id: row.id,
           mask: row.card_mask || row.id,
-          markets: parseMarkets(row.markets),
+          markets: parseAccountMarkets(row.markets),
           included: row.included === 1,
         }) satisfies ConsoleAccount,
     );
@@ -292,7 +318,7 @@ class Brokers {
     const now = Date.now();
     for (const account of accounts) {
       if (!account.accId) continue;
-      const markets = JSON.stringify(account.markets.filter((item): item is Market => item === "us" || item === "hk"));
+      const markets = JSON.stringify(account.markets.filter(isAccountMarket));
       const existing = await this.db
         .prepare("SELECT id, user_id FROM accounts WHERE broker = ? AND external_id = ? LIMIT 1")
         .bind(BROKER, account.accId)

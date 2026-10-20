@@ -1,5 +1,5 @@
-import type { Copy, Market } from "../lib/copy";
-import { parseMarkets } from "../lib/copy";
+import type { AccountMarket, Copy } from "../lib/copy";
+import { parseAccountMarkets } from "../lib/copy";
 import { formatClock, startOfShanghaiDay } from "../lib/format";
 import type { SqlDatabase } from "../storage/database";
 import { Ledger, type HoldingRow, type OrderRow } from "./ledger";
@@ -8,7 +8,7 @@ import { Publishers, type PublisherRecord } from "./publishers";
 export type ConsoleAccount = {
   id: string;
   mask: string;
-  markets: Market[];
+  markets: AccountMarket[];
   included: boolean;
 };
 
@@ -114,7 +114,7 @@ class PublisherConsole {
         ({
           id: row.id,
           mask: row.card_mask || row.id,
-          markets: parseMarkets(row.markets),
+          markets: parseAccountMarkets(row.markets),
           included: row.included === 1,
         }) satisfies ConsoleAccount,
     );

@@ -16,6 +16,7 @@ const SCOPE = "trade:read";
 const ENABLE_MARKET: Record<number, string> = {
   1: "hk",
   2: "us",
+  5: "futures",
 };
 
 const CASH_FIELDS: Array<[string, string]> = [

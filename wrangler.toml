@@ -12,12 +12,12 @@ run_worker_first = ["/api/*", "/users/*", "/oauth/*"]
 [[d1_databases]]
 binding = "DB"
 database_name = "wire"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "fce762ac-d8d6-433c-ba32-e546e5375894"
 migrations_dir = "src/db/migrations"
 
 [[kv_namespaces]]
 binding = "KV"
-id = "00000000-0000-0000-0000-000000000000"
+id = "35194c405ed64439912f3eccafeb5beb"
 
 [[queues.producers]]
 binding = "QUEUE"
@@ -28,6 +28,9 @@ queue = "wire-jobs"
 max_batch_size = 10
 max_retries = 3
 
-# 本地可用：curl "http://localhost:8787/cdn-cgi/local/scheduled?cron=*/31+*+*+*+*"
+# */31 刷新过期 token；0 8 * * * 为北京时间 16:00 同步仓位
+# 本地：
+# curl "http://localhost:8787/cdn-cgi/local/scheduled?cron=*/31+*+*+*+*"
+# curl "http://localhost:8787/cdn-cgi/local/scheduled?cron=0+8+*+*+*"
 [triggers]
-crons = ["*/31 * * * *"]
+crons = ["*/31 * * * *", "0 8 * * *"]

@@ -1,5 +1,6 @@
 export type Copy = { zh: string; en: string };
 export type Market = "us" | "hk";
+export type AccountMarket = Market | "futures";
 
 function parseCopy(raw: string): Copy {
   const text = raw.trim();
@@ -17,10 +18,14 @@ function parseCopy(raw: string): Copy {
 }
 
 function parseMarkets(raw: string): Market[] {
+  return parseAccountMarkets(raw).filter((item): item is Market => item === "us" || item === "hk");
+}
+
+function parseAccountMarkets(raw: string): AccountMarket[] {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((item): item is Market => item === "us" || item === "hk");
+    return parsed.filter((item): item is AccountMarket => item === "us" || item === "hk" || item === "futures");
   } catch {
     return [];
   }
@@ -32,4 +37,8 @@ function marketFromCurrency(currency: string): Market | "cash" {
   return "cash";
 }
 
-export { marketFromCurrency, parseCopy, parseMarkets };
+function isAccountMarket(value: string): value is AccountMarket {
+  return value === "us" || value === "hk" || value === "futures";
+}
+
+export { isAccountMarket, marketFromCurrency, parseAccountMarkets, parseCopy, parseMarkets };

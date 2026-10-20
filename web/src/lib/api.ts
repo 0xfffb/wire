@@ -3,6 +3,7 @@ const API_BASE = import.meta.env.PUBLIC_API_BASE ?? "";
 
 export type PublishStatus = "none" | "pending" | "approved";
 export type Market = "us" | "hk";
+export type BrokerMarket = Market | "futures";
 export type Copy = { zh: string; en: string };
 export type Access = "locked" | "preview" | "full" | "empty";
 
@@ -73,7 +74,7 @@ export type ConsoleHolding = {
 export type ConsoleAccount = {
   id: string;
   mask: string;
-  markets: Market[];
+  markets: BrokerMarket[];
   included: boolean;
 };
 

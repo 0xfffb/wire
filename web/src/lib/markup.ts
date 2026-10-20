@@ -1,4 +1,5 @@
-import type { Copy, Market } from "./publishers";
+import type { Copy } from "./publishers";
+import type { BrokerMarket } from "./api";
 
 export function esc(value: string) {
   return value
@@ -13,10 +14,11 @@ export function copyText(copy: Copy, locale: string) {
   return locale === "en" ? copy.en : copy.zh;
 }
 
-export function pill(tone: "us" | "hk" | "buy" | "sell" | "fill") {
+export function pill(tone: BrokerMarket | "buy" | "sell" | "fill") {
   const keys = {
     us: { key: "market_us", zh: "美股" },
     hk: { key: "market_hk", zh: "港股" },
+    futures: { key: "market_futures", zh: "期货" },
     buy: { key: "buy", zh: "买入" },
     sell: { key: "sell", zh: "卖出" },
     fill: { key: "fill_tag", zh: "成交" },
@@ -25,7 +27,7 @@ export function pill(tone: "us" | "hk" | "buy" | "sell" | "fill") {
   return `<span class="pill" data-tone="${tone}"><i class="pill-dot" aria-hidden="true"></i><span data-i18n="${item.key}">${item.zh}</span></span>`;
 }
 
-export function marketPills(markets: Market[]) {
+export function marketPills(markets: BrokerMarket[]) {
   return markets.map((market) => pill(market)).join("");
 }
 

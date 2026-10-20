@@ -7,6 +7,9 @@ import { CloudflareKvStore } from "./storage/kv/cloudflare";
 import type { QueueMessage } from "./storage/queue";
 import { CloudflareQueue } from "./storage/queue/cloudflare";
 
+const CRON_REFRESH = "*/31 * * * *";
+const CRON_DAILY_SYNC = "0 8 * * *";
+
 type CloudflareEnv = {
   DB: D1Database;
   KV: KVNamespace;
@@ -14,21 +17,8 @@ type CloudflareEnv = {
   ASSETS: Fetcher;
 };
 
-function fetch(request: Request, env: CloudflareEnv, ctx: ExecutionContext) {
-  const app = new ApiRouter({
-    database: new CloudflareSqlDatabase(env.DB),
-    kv: new CloudflareKvStore(env.KV),
-    queue: new CloudflareQueue(env.QUEUE),
-    brokerage: {
-      futu: new FutuBrokerage(),
-    },
-  }).app;
-
-  return app.fetch(request, env, ctx);
-}
-
-async function scheduled(_controller: ScheduledController, env: CloudflareEnv, _ctx: ExecutionContext) {
-  const deps = {
+function depsFrom(env: CloudflareEnv) {
+  return {
     database: new CloudflareSqlDatabase(env.DB),
     kv: new CloudflareKvStore(env.KV),
     queue: new CloudflareQueue(env.QUEUE),
@@ -36,20 +26,26 @@ async function scheduled(_controller: ScheduledController, env: CloudflareEnv, _
       futu: new FutuBrokerage(),
     },
   };
-  await Brokers.from(deps).enqueueDue(deps.queue);
+}
+
+function fetch(request: Request, env: CloudflareEnv, ctx: ExecutionContext) {
+  return new ApiRouter(depsFrom(env)).app.fetch(request, env, ctx);
+}
+
+async function scheduled(controller: ScheduledController, env: CloudflareEnv, _ctx: ExecutionContext) {
+  const deps = depsFrom(env);
+  const brokers = Brokers.from(deps);
+  if (controller.cron === CRON_DAILY_SYNC) {
+    await brokers.enqueueAllSync(deps.queue);
+    return;
+  }
+  if (controller.cron === CRON_REFRESH) {
+    await brokers.enqueueDue(deps.queue);
+  }
 }
 
 async function queue(batch: MessageBatch<QueueMessage>, env: CloudflareEnv) {
-  const deps = {
-    database: new CloudflareSqlDatabase(env.DB),
-    kv: new CloudflareKvStore(env.KV),
-    queue: new CloudflareQueue(env.QUEUE),
-    brokerage: {
-      futu: new FutuBrokerage(),
-    },
-  };
-
-  const consumer = new JobConsumer(deps);
+  const consumer = new JobConsumer(depsFrom(env));
   for (const message of batch.messages) {
     await consumer.consume(message.body);
     message.ack();
