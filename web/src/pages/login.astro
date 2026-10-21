@@ -1,0 +1,126 @@
+---
+import Prefs from "../components/Prefs.astro";
+import Base from "../layouts/Base.astro";
+---
+<Base title="登录 · Wire" titleKey="title_login" shell="auth">
+  <div id="setup-card" hidden>
+    <h1 data-i18n="setup">设置管理员</h1>
+    <form class="form" id="setup-form">
+      <label>
+        <span data-i18n="email">邮箱</span>
+        <input type="email" name="email" autocomplete="username" required />
+      </label>
+      <label>
+        <span data-i18n="password">密码</span>
+        <input type="password" name="password" autocomplete="new-password" required minlength="8" />
+      </label>
+      <label>
+        <span data-i18n="confirm_password">确认密码</span>
+        <input type="password" name="confirm" autocomplete="new-password" required minlength="8" />
+      </label>
+      <p class="note error" id="setup-error" hidden></p>
+      <button class="btn" type="submit" data-i18n="create">创建</button>
+    </form>
+  </div>
+  <div id="login-card" hidden>
+    <h1 data-i18n="login">登录</h1>
+    <form class="form" id="login-form">
+      <label>
+        <span data-i18n="email">邮箱</span>
+        <input type="email" name="email" autocomplete="username" required />
+      </label>
+      <label>
+        <span data-i18n="password">密码</span>
+        <input type="password" name="password" autocomplete="current-password" required />
+      </label>
+      <p class="note error" id="login-error" hidden></p>
+      <button class="btn" type="submit" data-i18n="login">登录</button>
+    </form>
+  </div>
+  <Prefs />
+</Base>
+
+<script>
+  import { ApiError, apiGet, apiSend, getMe, type Me } from "../lib/api";
+  import { applyUser } from "../lib/profile";
+  import { applyLocale, readLocale, t, type MessageKey } from "../lib/i18n";
+
+  const setupCard = document.getElementById("setup-card");
+  const loginCard = document.getElementById("login-card");
+  const setupForm = document.getElementById("setup-form") as HTMLFormElement | null;
+  const loginForm = document.getElementById("login-form") as HTMLFormElement | null;
+  const setupError = document.getElementById("setup-error");
+  const loginError = document.getElementById("login-error");
+
+  const keys = {
+    invalid_body: "error_invalid_body",
+    invalid_credentials: "error_invalid_credentials",
+    unauthorized: "error_unauthorized",
+    failed: "error_failed",
+    admin_exists: "error_admin_exists",
+    no_admin: "error_no_admin",
+    password_mismatch: "error_password_mismatch",
+  } as const;
+
+  function show(kind: "setup" | "login") {
+    if (setupCard) setupCard.hidden = kind !== "setup";
+    if (loginCard) loginCard.hidden = kind !== "login";
+    document.documentElement.dataset.titleKey = kind === "setup" ? "title_setup" : "title_login";
+    applyLocale(readLocale());
+  }
+
+  function showError(el: HTMLElement | null, code: string) {
+    if (!el) return;
+    const key = (code in keys ? keys[code as keyof typeof keys] : "error_failed") as MessageKey;
+    el.hidden = false;
+    el.textContent = t(readLocale(), key);
+  }
+
+  function goAdmin(user: Me) {
+    applyUser(user);
+    location.href = "/admin";
+  }
+
+  void apiGet<{ admin: boolean }>("/api/setup")
+    .then((data) => show(data.admin ? "login" : "setup"))
+    .catch(() => show("setup"));
+
+  void getMe()
+    .then((user) => goAdmin(user))
+    .catch(() => undefined);
+
+  setupForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (setupError) setupError.hidden = true;
+    const data = new FormData(setupForm);
+    void apiSend<Me>("/api/auth/setup", "POST", {
+      email: String(data.get("email") ?? ""),
+      password: String(data.get("password") ?? ""),
+      confirm: String(data.get("confirm") ?? ""),
+    })
+      .then((user) => goAdmin(user))
+      .catch((error) => {
+        const code = error instanceof ApiError ? error.code : "failed";
+        if (code === "admin_exists") {
+          show("login");
+          showError(loginError, code);
+          return;
+        }
+        showError(setupError, code);
+      });
+  });
+
+  loginForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (loginError) loginError.hidden = true;
+    const data = new FormData(loginForm);
+    void apiSend<Me>("/api/auth/login", "POST", {
+      email: String(data.get("email") ?? ""),
+      password: String(data.get("password") ?? ""),
+    })
+      .then((user) => goAdmin(user))
+      .catch((error) => {
+        showError(loginError, error instanceof ApiError ? error.code : "failed");
+      });
+  });
+</script>

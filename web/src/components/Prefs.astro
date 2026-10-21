@@ -1,0 +1,33 @@
+---
+import { locales, messages, themePrefs } from "../lib/i18n";
+
+const icons: Record<(typeof themePrefs)[number]["id"], string> = {
+  system:
+    '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="2.5" y="3" width="11" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M6 13h4M8 11v2" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>',
+  light:
+    '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="2.4" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M8 2.75v1.4M8 11.85v1.4M2.75 8h1.4M11.85 8h1.4M4.2 4.2l1 1M10.8 10.8l1 1M4.2 11.8l1-1M10.8 5.2l1-1" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>',
+  dark:
+    '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M10.2 3.15A5.15 5.15 0 1 0 12.85 10 4.15 4.15 0 0 1 10.2 3.15z" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>',
+};
+---
+<div class="prefs">
+  <div class="theme-switch" role="radiogroup" aria-label="Theme">
+    {themePrefs.map((item) => (
+      <button
+        type="button"
+        role="radio"
+        data-theme-option={item.id}
+        data-i18n={item.labelKey}
+        data-i18n-attr="aria-label"
+        aria-label={messages.zh[item.labelKey]}
+        title={messages.zh[item.labelKey]}
+        set:html={icons[item.id]}
+      />
+    ))}
+  </div>
+  <select class="pref-select" data-locale-select aria-label="Language">
+    {locales.map((item) => (
+      <option value={item.id}>{item.label}</option>
+    ))}
+  </select>
+</div>

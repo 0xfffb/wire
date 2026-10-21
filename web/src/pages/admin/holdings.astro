@@ -1,0 +1,14 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+<Base title="持仓 · Wire" heading="持仓" headingKey="nav_holdings" titleKey="title_holdings" shell="admin" active="holdings">
+  <div class="page">
+    <div class="well" data-admin-holdings></div>
+  </div>
+</Base>
+
+<script>
+  import { paintAdminTables } from "../../lib/book";
+
+  void paintAdminTables();
+</script>

@@ -1,0 +1,144 @@
+---
+import Prefs from "../components/Prefs.astro";
+import { adminNav } from "../lib/console";
+import "../styles/global.css";
+import type { MessageKey } from "../lib/i18n";
+
+interface Props {
+  title?: string;
+  heading?: string;
+  headingKey?: MessageKey;
+  titleKey?: MessageKey;
+  shell?: "guest" | "admin" | "auth";
+  active?: string;
+}
+
+const {
+  title = "Wire",
+  heading,
+  headingKey,
+  titleKey,
+  shell = "guest",
+  active,
+} = Astro.props;
+---
+<!doctype html>
+<html lang="zh-CN" data-theme="dark" data-theme-pref="system" data-locale="zh" data-auth="" data-shell={shell} data-title-key={titleKey}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Personal holdings." />
+    <meta name="theme-color" content="#08090a" />
+    <title>{title}</title>
+    <script is:inline>
+      (function () {
+        try {
+          var pref = localStorage.getItem("wire.theme");
+          if (pref !== "light" && pref !== "dark" && pref !== "system") pref = "system";
+          var t = pref === "system"
+            ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
+            : pref;
+          document.documentElement.setAttribute("data-theme-pref", pref);
+          document.documentElement.setAttribute("data-theme", t);
+          var l = localStorage.getItem("wire.locale");
+          if (l !== "en" && l !== "zh") l = "zh";
+          document.documentElement.setAttribute("data-locale", l);
+          document.documentElement.lang = l === "en" ? "en" : "zh-CN";
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    {shell === "auth" ? (
+      <div class="auth">
+        <div class="auth-card">
+          <slot />
+        </div>
+      </div>
+    ) : (
+      <div class="app">
+        <aside class="sidebar">
+          <a class="brand" href="/">
+            <span class="brand-mark">W</span>
+            Wire
+          </a>
+          {shell === "guest" ? (
+            <nav class="side-nav">
+              <a class={active === "positions" ? "is-active" : ""} href="/" data-i18n="nav_positions">仓位</a>
+            </nav>
+          ) : (
+            <nav class="side-nav">
+              <p class="nav-label" data-i18n="nav_console">操作台</p>
+              {adminNav.map((item) => (
+                <a class={active === item.id ? "is-active" : ""} href={item.href} data-i18n={item.key}>
+                  {item.zh}
+                </a>
+              ))}
+            </nav>
+          )}
+          <div class="sidebar-end">
+            <div class="sidebar-foot">
+              <Prefs />
+            </div>
+            <nav class="side-nav">
+              {shell === "admin" ? (
+                <div class="side-account-row">
+                  <a class:list={["side-account", active === "profile" && "is-active"]} href="/admin/profile">
+                    <span class="avatar" data-me-avatar>木</span>
+                    <span>
+                      <b data-me-name>木兰</b>
+                      <span data-i18n="role_admin">管理员</span>
+                    </span>
+                  </a>
+                  <a class="side-logout" href="/" data-i18n="logout" data-logout>退出</a>
+                </div>
+              ) : (
+                <a class="side-login" href="/admin" data-i18n="nav_console">操作台</a>
+              )}
+            </nav>
+          </div>
+        </aside>
+        <div class="workspace">
+          <header class="topbar">
+            <h1 {...(headingKey ? { "data-i18n": headingKey } : {})}>{heading ?? title}</h1>
+            {shell === "admin" ? (
+              <div class="top-actions">
+                <a class="crumb" href="/" data-i18n="public_page">公开页</a>
+              </div>
+            ) : (
+              <slot name="topbar" />
+            )}
+          </header>
+          <div class="content">
+            <slot />
+          </div>
+        </div>
+      </div>
+    )}
+    <script>
+      import { bootUi } from "../lib/i18n";
+      import { ApiError, apiSend, forgetMe, getMe } from "../lib/api";
+      import { applyUser } from "../lib/profile";
+
+      bootUi();
+
+      if (document.documentElement.dataset.shell === "admin") {
+        void getMe()
+          .then((user) => applyUser(user))
+          .catch((error) => {
+            if (error instanceof ApiError && error.status === 401) location.replace("/login");
+          });
+      }
+
+      document.querySelector("[data-logout]")?.addEventListener("click", (event) => {
+        event.preventDefault();
+        void apiSend("/api/auth/logout", "POST")
+          .catch(() => undefined)
+          .finally(() => {
+            forgetMe();
+            location.href = "/";
+          });
+      });
+    </script>
+  </body>
+</html>

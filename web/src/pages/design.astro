@@ -1,0 +1,676 @@
+---
+import Prefs from "../components/Prefs.astro";
+import "../styles/global.css";
+---
+<!doctype html>
+<html lang="zh-CN" data-theme="dark" data-theme-pref="system" data-locale="zh" data-screen="public">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#08090a" />
+    <title>演示 · Wire</title>
+    <style>
+      .identity { min-width: 0; }
+      .identity > div { min-width: 0; }
+      .identity .lede { overflow-wrap: anywhere; }
+      .identity .avatar.lg { width: 56px; height: 56px; font-size: 20px; border-radius: 12px; }
+      .name-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+      .name-row h1 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .socials { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+      .socials a {
+        width: 32px;
+        height: 32px;
+        display: grid;
+        place-items: center;
+        border-radius: 8px;
+        color: var(--text);
+        background: var(--fill);
+        border: 1px solid var(--input-border);
+        text-decoration: none;
+      }
+      .socials a:hover {
+        color: #fff;
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      .socials svg { display: block; }
+      .field-icon { display: inline-flex; align-items: center; gap: 6px; color: var(--text); }
+      .field-icon svg { flex: none; color: var(--text); }
+      .empty { color: var(--muted); font-size: 13px; padding: 12px 0; margin: 0; }
+      .hint { color: var(--faint); font-size: 12px; margin: 8px 0 0; }
+      .login-card { padding: 28px 24px 20px; min-width: 0; }
+      .login-card .form { width: 100%; max-width: none; }
+      .login-card .form .btn { width: 100%; }
+      .login-card :global(.prefs) {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        margin: 24px 0 0;
+      }
+      html[data-auth-card] .sidebar,
+      html[data-auth-card] .topbar { display: none; }
+      html[data-auth-card] .workspace {
+        border: 0;
+        background: transparent;
+        overflow: hidden;
+      }
+      html[data-auth-card] .app {
+        width: min(420px, 100%);
+        height: auto;
+        min-height: 0;
+        align-self: center;
+        grid-template-columns: minmax(0, 1fr);
+        background: var(--elev-1);
+        overflow: hidden;
+      }
+      html[data-auth-card] .content { overflow: hidden; }
+      [hidden] { display: none !important; }
+
+      html, body { height: 100%; }
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: stretch;
+        padding: 24px;
+      }
+      .app {
+        width: min(1280px, 100%);
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        gap: 0;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-panel);
+        overflow: hidden;
+        background: var(--sidebar);
+      }
+      .workspace {
+        border: 0;
+        border-left: 1px solid var(--line);
+        border-radius: 0;
+      }
+      .sidebar { padding: 8px 8px 12px; }
+      @media (max-width: 860px) {
+        body { padding: 12px; }
+        .app { height: auto; min-height: calc(100vh - 24px); }
+        .workspace { border-left: 0; }
+      }
+    </style>
+    <script is:inline>
+      (function () {
+        try {
+          var pref = localStorage.getItem("wire.theme");
+          if (pref !== "light" && pref !== "dark" && pref !== "system") pref = "system";
+          var t = pref === "system"
+            ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
+            : pref;
+          document.documentElement.setAttribute("data-theme-pref", pref);
+          document.documentElement.setAttribute("data-theme", t);
+          var l = localStorage.getItem("wire.locale");
+          if (l !== "en" && l !== "zh") l = "zh";
+          document.documentElement.setAttribute("data-locale", l);
+          document.documentElement.lang = l === "en" ? "en" : "zh-CN";
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <a class="brand" href="#public" data-go="public">
+          <span class="brand-mark">W</span>
+          Wire
+        </a>
+        <nav class="side-nav" data-guest-nav>
+          <a class="is-active" href="#public" data-go="public">仓位</a>
+        </nav>
+        <nav class="side-nav" data-owner-nav>
+          <p class="nav-label" style="margin:0 6px 4px">操作台</p>
+          <a href="#overview" data-go="overview">概览</a>
+          <a href="#connect" data-go="connect">连接</a>
+          <a href="#holdings" data-go="holdings">持仓</a>
+          <a href="#records" data-go="records">记录</a>
+          <a href="#sync-log" data-go="sync-log">同步</a>
+          <a href="#public-settings" data-go="public-settings">公开</a>
+          <a href="#profile" data-go="profile">资料</a>
+        </nav>
+        <div class="sidebar-end">
+          <div class="sidebar-foot">
+            <Prefs />
+          </div>
+          <nav class="side-nav">
+            <div class="side-account-row" data-owner-nav>
+              <a class="side-account" href="#profile" data-go="profile">
+                <span class="avatar" style="--h:32">木</span>
+                <span>
+                  <b>木兰</b>
+                  <span>管理员</span>
+                </span>
+              </a>
+              <a class="side-logout" href="#public" data-go="public">退出</a>
+            </div>
+            <a class="side-login" data-guest-nav href="#setup" data-go="auth">操作台</a>
+          </nav>
+        </div>
+      </aside>
+
+      <div class="workspace">
+        <header class="topbar">
+          <h1 id="heading">仓位</h1>
+          <div class="top-actions" data-owner-nav hidden>
+            <a class="crumb" href="#public" data-go="public">公开页</a>
+          </div>
+        </header>
+
+        <div class="content">
+          <section id="view-public">
+            <div class="page">
+              <div class="identity">
+                <span class="avatar lg" style="--h:32">木</span>
+                <div>
+                  <div class="name-row">
+                    <h1>木兰</h1>
+                    <span class="pill" data-tone="live" data-live-tag><i class="pill-dot"></i>实盘</span>
+                  </div>
+                  <p class="lede" style="margin:6px 0 0">美股为主，港股做底仓。记录自己的仓，不是信号。</p>
+                  <div class="socials">
+                    <a href="https://x.com/amu" target="_blank" rel="noreferrer" aria-label="X" title="X">
+                      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M9.54 6.78 14.7 1h-1.22L9.02 6.02 5.9 1H1.5l5.41 7.87L1.5 15h1.22l4.73-5.5L10.1 15h4.4L9.54 6.78Zm-1.67 1.95-.55-.78L3.38 1.91h1.87l3.52 5.03.55.78 4.58 6.55h-1.87L7.87 8.73Z"/></svg>
+                    </a>
+                    <a href="https://amu.example.com" target="_blank" rel="noreferrer" aria-label="网站" title="网站">
+                      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="5.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2.75 8h10.5M8 2.75c1.7 1.8 2.55 3.55 2.55 5.25S9.7 11.45 8 13.25C6.3 11.45 5.45 9.7 5.45 8S6.3 4.55 8 2.75Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+                    </a>
+                  </div>
+                </div>
+              </div>
+              <div data-when-public>
+                <div class="props">
+                  <div class="prop">当前收益<b class="up">+7.61%</b></div>
+                  <div class="prop">同步<b>2026-10-21 10:04</b></div>
+                </div>
+                <h2>现金</h2>
+                <div class="well" data-public-cash></div>
+                <h2>持仓</h2>
+                <div class="well" data-public-holdings></div>
+                <div data-when-fills>
+                  <h2>最近订单</h2>
+                  <div class="well" data-public-orders></div>
+                </div>
+              </div>
+              <p class="lede" data-when-private>仓位未公开。</p>
+              <p class="lede" data-when-nosync hidden>还没有同步。</p>
+            </div>
+          </section>
+
+          <section id="view-overview" hidden>
+            <div class="page" data-overview></div>
+          </section>
+
+          <section id="view-holdings" hidden>
+            <div class="page">
+              <div class="well" data-admin-holdings></div>
+            </div>
+          </section>
+
+          <section id="view-records" hidden>
+            <div class="page">
+              <h2 style="margin-top:0">订单</h2>
+              <div class="well" data-admin-orders></div>
+            </div>
+          </section>
+
+          <section id="view-connect" hidden>
+            <div class="toolbar">
+              <span class="hint" style="margin:0 8px 0 0">演示</span>
+              <button class="chip is-on" type="button" data-set-conn="connected">已连接</button>
+              <button class="chip" type="button" data-set-conn="disconnected">未连接</button>
+              <button class="chip" type="button" data-set-conn="reauth">需授权</button>
+            </div>
+            <div class="page" style="padding-top:0" data-conn-panel="connected">
+              <h2>SnapTrade</h2>
+              <div class="well">
+                <div class="setting">
+                  <span class="meta">
+                    <b>SnapTrade</b>
+                    <small>已连接 · 嘉信 · 上次成功 2026-10-21 10:04</small>
+                  </span>
+                  <span class="top-actions">
+                    <button class="btn ghost" type="button">断开</button>
+                    <a class="btn ghost" href="#keys">配置</a>
+                  </span>
+                </div>
+              </div>
+              <h2>纳入账户</h2>
+              <div class="well">
+                <label class="account-row">
+                  <input type="radio" name="acc" checked />
+                  <span class="grow">····1234</span>
+                  <span class="pill" data-tone="live"><i class="pill-dot"></i>实盘</span>
+                  <span class="pill" data-tone="us"><i class="pill-dot"></i>嘉信</span>
+                </label>
+                <label class="account-row">
+                  <input type="radio" name="acc" />
+                  <span class="grow">····8890</span>
+                  <span class="pill" data-tone="paper"><i class="pill-dot"></i>模拟盘</span>
+                  <span class="pill" data-tone="us"><i class="pill-dot"></i>嘉信 IRA</span>
+                </label>
+              </div>
+              <div class="toolbar" style="padding:16px 0 0">
+                <button class="btn" type="button">确认纳入</button>
+              </div>
+            </div>
+            <div class="page" style="padding-top:0" data-conn-panel="disconnected" hidden>
+              <div class="well">
+                <div class="setting">
+                  <span class="meta">
+                    <b>SnapTrade</b>
+                    <small>未连接</small>
+                  </span>
+                  <span class="top-actions">
+                    <button class="btn" type="button">连接</button>
+                    <a class="btn ghost" href="#keys">配置</a>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="page" style="padding-top:0" data-conn-panel="reauth" hidden>
+              <p class="lede">授权失效。公开页仍展示上次成功同步的快照。</p>
+              <div class="well">
+                <div class="setting">
+                  <span class="meta">
+                    <b>SnapTrade</b>
+                    <small>需要重新授权 · 上次成功 2026-10-21 10:04</small>
+                  </span>
+                  <span class="top-actions">
+                    <button class="btn" type="button">重新连接</button>
+                    <a class="btn ghost" href="#keys">配置</a>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="view-sync-log" hidden>
+            <div class="page">
+              <div class="well" data-admin-sync></div>
+            </div>
+          </section>
+
+          <section id="view-setup" hidden>
+            <div class="login-card">
+              <div class="toolbar" style="padding:0 0 16px">
+                <span class="hint" style="margin:0 8px 0 0">演示</span>
+                <button class="chip is-on" type="button" data-set-admin="0">首次</button>
+                <button class="chip" type="button" data-set-admin="1">已有账号</button>
+              </div>
+              <h1 style="font-size:20px;font-weight:590;margin:0 0 16px">设置管理员</h1>
+              <form class="form" id="demo-setup" onsubmit="return false">
+                <label>
+                  <span>邮箱</span>
+                  <input type="email" autocomplete="username" />
+                </label>
+                <label>
+                  <span>密码</span>
+                  <input type="password" autocomplete="new-password" />
+                </label>
+                <label>
+                  <span>确认密码</span>
+                  <input type="password" autocomplete="new-password" />
+                </label>
+                <button class="btn" type="submit">创建</button>
+              </form>
+              <Prefs />
+            </div>
+          </section>
+
+          <section id="view-login" hidden>
+            <div class="login-card">
+              <div class="toolbar" style="padding:0 0 16px">
+                <span class="hint" style="margin:0 8px 0 0">演示</span>
+                <button class="chip" type="button" data-set-admin="0">首次</button>
+                <button class="chip is-on" type="button" data-set-admin="1">已有账号</button>
+              </div>
+              <h1 style="font-size:20px;font-weight:590;margin:0 0 16px">登录</h1>
+              <form class="form" id="demo-login" onsubmit="return false">
+                <label>
+                  <span>邮箱</span>
+                  <input type="email" value="amu@example.com" autocomplete="username" />
+                </label>
+                <label>
+                  <span>密码</span>
+                  <input type="password" autocomplete="current-password" />
+                </label>
+                <button class="btn" type="submit">登录</button>
+              </form>
+              <Prefs />
+            </div>
+          </section>
+
+          <section id="view-profile" hidden>
+            <div class="page">
+              <form class="form wide" onsubmit="return false">
+                <label>
+                  <span>显示名</span>
+                  <input type="text" value="木兰" maxlength="24" />
+                </label>
+                <label>
+                  <span>简介</span>
+                  <textarea rows="3">美股为主，港股做底仓。记录自己的仓，不是信号。</textarea>
+                </label>
+                <h2 style="margin-top:8px">社媒</h2>
+                <label>
+                  <span class="field-icon">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M9.54 6.78 14.7 1h-1.22L9.02 6.02 5.9 1H1.5l5.41 7.87L1.5 15h1.22l4.73-5.5L10.1 15h4.4L9.54 6.78Zm-1.67 1.95-.55-.78L3.38 1.91h1.87l3.52 5.03.55.78 4.58 6.55h-1.87L7.87 8.73Z"/></svg>
+                    X
+                  </span>
+                  <input type="url" value="https://x.com/amu" placeholder="https://x.com/…" />
+                </label>
+                <label>
+                  <span class="field-icon">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="5.25" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M2.75 8h10.5M8 2.75c1.7 1.8 2.55 3.55 2.55 5.25S9.7 11.45 8 13.25C6.3 11.45 5.45 9.7 5.45 8S6.3 4.55 8 2.75Z" fill="none" stroke="currentColor" stroke-width="1.25"/></svg>
+                    网站
+                  </span>
+                  <input type="url" value="https://amu.example.com" placeholder="https://" />
+                </label>
+                <label>
+                  <span class="field-icon">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="1.75" y="3.5" width="12.5" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M6.75 6.2v3.6L10.1 8 6.75 6.2Z" fill="currentColor"/></svg>
+                    YouTube
+                  </span>
+                  <input type="url" value="" placeholder="https://youtube.com/…" />
+                </label>
+                <button class="btn" type="submit">保存</button>
+              </form>
+            </div>
+          </section>
+
+          <section id="view-public-settings" hidden>
+            <div class="page">
+              <div class="well">
+                <div class="setting">
+                  <span class="meta">
+                    <b>公开仓位</b>
+                    <small>关闭后首页只留名字和简介。</small>
+                  </span>
+                  <button class="switch is-on" type="button" id="opt-public" aria-pressed="true"></button>
+                </div>
+                <div class="setting">
+                  <span class="meta">
+                    <b>显示数量</b>
+                    <small>关闭则数量、市值、金额、成本、占比为模糊。现金和股价始终显示。</small>
+                  </span>
+                  <button class="switch" type="button" id="opt-qty" aria-pressed="false"></button>
+                </div>
+                <div class="setting">
+                  <span class="meta">
+                    <b>显示订单</b>
+                    <small>关闭后公开页不出现最近订单。</small>
+                  </span>
+                  <button class="switch is-on" type="button" id="opt-fills" aria-pressed="true"></button>
+                </div>
+                <div class="setting">
+                  <span class="meta">
+                    <b>公开链接</b>
+                    <small>/</small>
+                  </span>
+                  <a class="btn ghost" href="#public" data-go="public">查看公开页</a>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      import { bootUi } from "../lib/i18n";
+
+      type Screen = "public" | "overview" | "holdings" | "records" | "connect" | "sync-log" | "public-settings" | "profile" | "login" | "setup";
+      type Conn = "connected" | "disconnected" | "reauth";
+      const titles: Record<Screen, string> = {
+        public: "仓位",
+        overview: "概览",
+        holdings: "持仓",
+        records: "记录",
+        connect: "连接",
+        "sync-log": "同步",
+        "public-settings": "公开",
+        profile: "资料",
+        login: "登录",
+        setup: "设置管理员",
+      };
+      const owner: Screen[] = ["overview", "holdings", "records", "connect", "sync-log", "public-settings", "profile"];
+
+      const root = document.documentElement;
+      const heading = document.getElementById("heading");
+      const publicCash = document.querySelector("[data-public-cash]");
+      const publicHoldings = document.querySelector("[data-public-holdings]");
+      const publicOrders = document.querySelector("[data-public-orders]");
+      const overviewBox = document.querySelector("[data-overview]");
+      const adminHoldings = document.querySelector("[data-admin-holdings]");
+      const adminOrders = document.querySelector("[data-admin-orders]");
+      const adminSync = document.querySelector("[data-admin-sync]");
+
+      let screen: Screen = "public";
+      let listed = true;
+      let showQty = false;
+      let showFills = true;
+      let conn: Conn = "connected";
+      let hasAdmin = false;
+
+      function authScreen(): Screen {
+        return hasAdmin ? "login" : "setup";
+      }
+
+      function hasSnapshot() {
+        return conn !== "disconnected";
+      }
+
+      function gated(value: string) {
+        return showQty ? value : `<span class="gated" aria-hidden="true"></span>`;
+      }
+
+      function ccyPill(ccy: string) {
+        return `<span class="pill" data-tone="${ccy === "USD" ? "us" : "hk"}"><i class="pill-dot"></i>${ccy}</span>`;
+      }
+
+      function emptyBox(text: string) {
+        return `<p class="empty">${text}</p>`;
+      }
+
+      function cashRows() {
+        return [
+          { ccy: "USD", bal: "8,240.12", weight: "17%" },
+          { ccy: "HKD", bal: "21,500.00", weight: "24%" },
+        ].filter((row) => Number(row.bal.replace(/,/g, "")) > 0);
+      }
+
+      function cashTable() {
+        const rows = cashRows();
+        if (!rows.length) return emptyBox("没有现金。");
+        return `<table class="holdings"><thead><tr><th>货币</th><th class="num">余额</th><th class="num">占比</th></tr></thead><tbody>${rows
+          .map((row) => `<tr><td>${row.ccy}</td><td class="num">${row.bal}</td><td class="num">${row.weight}</td></tr>`)
+          .join("")}</tbody></table>`;
+      }
+
+      function holdingsTable(hideSize: boolean) {
+        const rows = [
+          { code: "AAPL", name: "苹果", ccy: "USD", price: "186.25", qty: "80", value: "14,900", cost: "13,800", pnl: "+1,100.00", pnlPct: "+7.97%", weight: "31%" },
+          { code: "NVDA", name: "英伟达", ccy: "USD", price: "355.00", qty: "40", value: "14,200", cost: "12,400", pnl: "+1,800.00", pnlPct: "+14.52%", weight: "30%" },
+          { code: "MSFT", name: "微软", ccy: "USD", price: "424.00", qty: "25", value: "10,600", cost: "9,950", pnl: "+650.00", pnlPct: "+6.53%", weight: "22%" },
+          { code: "0700", name: "腾讯", ccy: "HKD", price: "340.00", qty: "200", value: "68,000", cost: "61,700", pnl: "+6,300.00", pnlPct: "+10.21%", weight: "76%" },
+        ];
+        const qty = (value: string) => (hideSize ? gated(value) : value);
+        return `<table class="holdings"><thead><tr><th>持仓</th><th>货币</th><th class="num">股价</th><th class="num">数量</th><th class="num">市值</th><th class="num">成本</th><th class="num">盈亏</th><th class="num">占比</th></tr></thead><tbody>${rows
+          .map(
+            (row) => `<tr><td><strong>${row.code}</strong> ${row.name}</td><td>${ccyPill(row.ccy)}</td><td class="num">${row.price}</td><td class="num">${qty(row.qty)}</td><td class="num">${qty(row.value)}</td><td class="num">${qty(row.cost)}</td><td class="num"><span class="pnl">${qty(row.pnl)}<span class="pnl-pct">${row.pnlPct}</span></span></td><td class="num">${qty(row.weight)}</td></tr>`,
+          )
+          .join("")}</tbody></table>`;
+      }
+
+      function ordersTable(hideSize: boolean) {
+        const rows = [
+          { code: "NVDA", ccy: "USD", side: "buy", sideLabel: "买入", price: "355.00", qty: "10", amount: "3,550", status: "ok", statusLabel: "已成", time: "2026-10-21 09:41" },
+          { code: "AAPL", ccy: "USD", side: "sell", sideLabel: "卖出", price: "186.10", qty: "20", amount: "3,722", status: "ok", statusLabel: "已成", time: "2026-10-20 15:02" },
+          { code: "0700", ccy: "HKD", side: "buy", sideLabel: "买入", price: "308.50", qty: "50", amount: "15,425", status: "ok", statusLabel: "已成", time: "2026-10-12 10:18" },
+        ];
+        const qty = (value: string) => (hideSize ? gated(value) : value);
+        return `<table class="holdings"><thead><tr><th>订单</th><th>方向</th><th>货币</th><th class="num">股价</th><th class="num">数量</th><th class="num">金额</th><th>状态</th><th>时间</th></tr></thead><tbody>${rows
+          .map(
+            (row) => `<tr><td><strong>${row.code}</strong></td><td><span class="pill" data-tone="${row.side}"><i class="pill-dot"></i>${row.sideLabel}</span></td><td>${ccyPill(row.ccy)}</td><td class="num">${row.price}</td><td class="num">${qty(row.qty)}</td><td class="num">${qty(row.amount)}</td><td><span class="pill" data-tone="${row.status}"><i class="pill-dot"></i>${row.statusLabel}</span></td><td>${row.time}</td></tr>`,
+          )
+          .join("")}</tbody></table>`;
+      }
+
+      function syncTable() {
+        return `<table class="holdings"><thead><tr><th>时间</th><th>结果</th><th>说明</th></tr></thead><tbody>
+          <tr><td>2026-10-21 10:04</td><td><span class="pill" data-tone="ok"><i class="pill-dot"></i>成功</span></td><td>成功</td></tr>
+          <tr><td>2026-10-20 16:02</td><td><span class="pill" data-tone="ok"><i class="pill-dot"></i>成功</span></td><td>成功</td></tr>
+          <tr><td>2026-10-19 14:22</td><td><span class="pill" data-tone="error"><i class="pill-dot"></i>失败</span></td><td>需要重新授权</td></tr>
+          <tr><td>2026-10-18 08:11</td><td><span class="pill" data-tone="ok"><i class="pill-dot"></i>成功</span></td><td>成功</td></tr>
+        </tbody></table>`;
+      }
+
+      function feedHtml() {
+        return `<h2>最近变动</h2><div class="well"><ul class="feed">
+          <li><span class="feed-main"><span class="pill" data-tone="buy"><i class="pill-dot"></i>买入</span>NVDA</span><time>2026-10-21 09:41</time></li>
+          <li><span class="feed-main"><span class="pill" data-tone="sell"><i class="pill-dot"></i>卖出</span>AAPL</span><time>2026-10-20 15:02</time></li>
+          <li><span class="feed-main"><span class="pill" data-tone="buy"><i class="pill-dot"></i>买入</span>0700</span><time>2026-10-12 10:18</time></li>
+        </ul></div>`;
+      }
+
+      function paintOverview() {
+        if (!overviewBox) return;
+        if (conn === "disconnected") {
+          overviewBox.innerHTML = `<div class="props"><div class="prop">状态<b>未连接</b></div><div class="prop">主页<b>${listed ? "公开" : "未公开"}</b></div></div>
+            <p class="lede">还没有连接 SnapTrade。连上并完成一次成功同步后，公开页才会有仓。</p>
+            <a class="btn" href="#connect" data-go="connect">去连接</a>`;
+          return;
+        }
+        const status = conn === "reauth"
+          ? `<div class="prop">状态<b class="down">需要重新授权</b></div>`
+          : `<div class="prop">状态<b>已连接</b></div>`;
+        overviewBox.innerHTML = `${status ? `<div class="props">${status}<div class="prop">来源<b>SnapTrade</b></div><div class="prop">当前收益<b class="up">+7.61%</b></div><div class="prop">主页<b>${listed ? "公开" : "未公开"}</b></div><div class="prop">上次成功<b>2026-10-21 10:04</b></div></div>` : ""}
+          ${conn === "reauth" ? `<p class="lede">授权失效。公开页仍是上次成功同步的数据。</p>` : ""}
+          ${feedHtml()}`;
+      }
+
+      function paintAdmin() {
+        if (adminHoldings) adminHoldings.innerHTML = hasSnapshot() ? holdingsTable(false) : emptyBox("还没有持仓。连接账户并完成同步后会出现。");
+        if (adminOrders) adminOrders.innerHTML = hasSnapshot() ? ordersTable(false) : emptyBox("还没有订单。");
+        if (adminSync) adminSync.innerHTML = hasSnapshot() || conn === "reauth" ? syncTable() : emptyBox("还没有同步记录。");
+        document.querySelectorAll<HTMLElement>("[data-conn-panel]").forEach((el) => {
+          el.hidden = el.dataset.connPanel !== conn;
+        });
+        document.querySelectorAll<HTMLButtonElement>("[data-set-conn]").forEach((btn) => {
+          btn.classList.toggle("is-on", btn.dataset.setConn === conn);
+        });
+      }
+
+      function paintPublic() {
+        if (publicCash) publicCash.innerHTML = cashTable();
+        if (publicHoldings) publicHoldings.innerHTML = holdingsTable(true);
+        if (publicOrders) publicOrders.innerHTML = ordersTable(true);
+        const snapshot = listed && hasSnapshot();
+        document.querySelectorAll<HTMLElement>("[data-when-public]").forEach((el) => {
+          el.hidden = !snapshot;
+        });
+        document.querySelectorAll<HTMLElement>("[data-when-private]").forEach((el) => {
+          el.hidden = listed;
+        });
+        document.querySelectorAll<HTMLElement>("[data-when-nosync]").forEach((el) => {
+          el.hidden = !(listed && !hasSnapshot());
+        });
+        document.querySelectorAll<HTMLElement>("[data-when-fills]").forEach((el) => {
+          el.hidden = !snapshot || !showFills;
+        });
+        document.querySelectorAll<HTMLElement>("[data-live-tag]").forEach((el) => {
+          el.hidden = !hasSnapshot();
+        });
+      }
+
+      function paint() {
+        paintPublic();
+        paintOverview();
+        paintAdmin();
+      }
+
+      function go(next: Screen) {
+        screen = next;
+        root.dataset.screen = next;
+        if (heading) heading.textContent = titles[next];
+        document.querySelectorAll("section[id^='view-']").forEach((el) => {
+          (el as HTMLElement).hidden = el.id !== `view-${next}`;
+        });
+        const isOwner = owner.includes(next);
+        const isAuth = next === "login" || next === "setup";
+        root.toggleAttribute("data-auth-card", isAuth);
+        document.querySelectorAll<HTMLElement>("[data-guest-nav]").forEach((el) => {
+          el.hidden = isOwner || isAuth;
+        });
+        document.querySelectorAll<HTMLElement>("[data-owner-nav]").forEach((el) => {
+          el.hidden = !isOwner || isAuth;
+        });
+        document.querySelectorAll<HTMLButtonElement>("[data-set-admin]").forEach((btn) => {
+          btn.classList.toggle("is-on", btn.dataset.setAdmin === (hasAdmin ? "1" : "0"));
+        });
+        document.querySelectorAll<HTMLAnchorElement>("nav.side-nav a[data-go]").forEach((el) => {
+          const id = el.getAttribute("data-go");
+          el.classList.toggle("is-active", id === next && !el.classList.contains("side-login"));
+        });
+        history.replaceState(null, "", `#${next}`);
+      }
+
+      function bindSwitch(id: string, get: () => boolean, set: (value: boolean) => void) {
+        const btn = document.getElementById(id);
+        btn?.addEventListener("click", () => {
+          const next = !get();
+          set(next);
+          btn.classList.toggle("is-on", next);
+          btn.setAttribute("aria-pressed", next ? "true" : "false");
+          paint();
+        });
+      }
+
+      document.addEventListener("click", (event) => {
+        const connBtn = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-set-conn]");
+        if (connBtn?.dataset.setConn) {
+          conn = connBtn.dataset.setConn as Conn;
+          paint();
+          return;
+        }
+        const adminBtn = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-set-admin]");
+        if (adminBtn?.dataset.setAdmin) {
+          hasAdmin = adminBtn.dataset.setAdmin === "1";
+          go(authScreen());
+          return;
+        }
+        const link = (event.target as HTMLElement).closest<HTMLAnchorElement>("[data-go]");
+        if (!link) return;
+        event.preventDefault();
+        go(link.dataset.go === "auth" ? authScreen() : link.dataset.go as Screen);
+      });
+
+      document.getElementById("demo-setup")?.addEventListener("submit", (event) => {
+        event.preventDefault();
+        hasAdmin = true;
+        go("overview");
+      });
+
+      document.getElementById("demo-login")?.addEventListener("submit", (event) => {
+        event.preventDefault();
+        hasAdmin = true;
+        go("overview");
+      });
+
+      bindSwitch("opt-public", () => listed, (v) => { listed = v; });
+      bindSwitch("opt-qty", () => showQty, (v) => { showQty = v; });
+      bindSwitch("opt-fills", () => showFills, (v) => { showFills = v; });
+
+      const hash = location.hash.replace("#", "") as Screen;
+      paint();
+      go(titles[hash] ? hash : "public");
+      bootUi();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,65 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+<Base title="公开 · Wire" heading="公开" headingKey="nav_public" titleKey="title_public" shell="admin" active="public">
+  <div class="page">
+    <div class="well">
+      <div class="setting">
+        <span class="meta">
+          <b data-i18n="share_listed">公开仓位</b>
+          <small data-i18n="share_listed_hint">关闭后首页只留名字和简介。</small>
+        </span>
+        <button class="switch" type="button" id="opt-public" aria-pressed="false"></button>
+      </div>
+      <div class="setting">
+        <span class="meta">
+          <b data-i18n="share_qty">显示数量</b>
+          <small data-i18n="share_qty_hint">关闭则数量、市值、金额、成本、占比为模糊。现金和股价始终显示。</small>
+        </span>
+        <button class="switch" type="button" id="opt-qty" aria-pressed="false"></button>
+      </div>
+      <div class="setting">
+        <span class="meta">
+          <b data-i18n="share_fills">显示订单</b>
+          <small data-i18n="share_fills_hint">关闭后公开页不出现最近订单。</small>
+        </span>
+        <button class="switch" type="button" id="opt-fills" aria-pressed="false"></button>
+      </div>
+      <div class="setting">
+        <span class="meta">
+          <b data-i18n="share_link">公开链接</b>
+          <small>/</small>
+        </span>
+        <a class="btn ghost" href="/" data-i18n="view_public">查看公开页</a>
+      </div>
+    </div>
+  </div>
+</Base>
+
+<script>
+  import { apiGet, apiSend, type ShareState } from "../../lib/api";
+
+  const share: ShareState = { listed: false, showQty: false, showFills: true };
+
+  void apiGet<ShareState>("/api/admin/share").then((data) => {
+    share.listed = data.listed;
+    share.showQty = data.showQty;
+    share.showFills = data.showFills;
+    bind("opt-public", "listed");
+    bind("opt-qty", "showQty");
+    bind("opt-fills", "showFills");
+  });
+
+  function bind(id: string, key: keyof ShareState) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.classList.toggle("is-on", share[key]);
+    btn.setAttribute("aria-pressed", share[key] ? "true" : "false");
+    btn.addEventListener("click", () => {
+      share[key] = !share[key];
+      void apiSend("/api/admin/share", "PUT", { [key]: share[key] });
+      btn.classList.toggle("is-on", share[key]);
+      btn.setAttribute("aria-pressed", share[key] ? "true" : "false");
+    });
+  }
+</script>

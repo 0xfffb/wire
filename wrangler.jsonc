@@ -1,0 +1,42 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "wire",
+  "main": "src/cloudflare.ts",
+  "compatibility_date": "2025-10-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "logs": {
+      "invocation_logs": true,
+    },
+  },
+  "assets": {
+    "directory": "./web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": [
+      "/api/*",
+      "/oauth/*",
+      "/login",
+      "/login/",
+      "/admin",
+      "/admin/*",
+    ],
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "wire",
+      "migrations_dir": "src/db/migrations",
+    },
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+    },
+  ],
+  "triggers": {
+    "crons": ["0 8 * * *"],
+  },
+}

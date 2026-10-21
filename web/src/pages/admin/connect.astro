@@ -1,0 +1,67 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+<Base title="连接 · Wire" heading="连接" headingKey="nav_connect" titleKey="title_connect" shell="admin" active="connect">
+  <div class="page" data-connect-view="link">
+    <h2 data-i18n="snaptrade">SnapTrade</h2>
+    <p class="lede" data-conn-panel="reauth" hidden data-i18n="reauth_note">授权失效。公开页仍展示上次成功同步的快照。</p>
+    <p class="note error" data-connect-error hidden></p>
+    <div class="well">
+      <div class="setting">
+        <span class="meta">
+          <b data-i18n="snaptrade">SnapTrade</b>
+          <small data-conn-panel="connected"><span data-i18n="connected">已连接</span> · <span data-i18n="last_ok">上次成功</span> <span data-connect-lastok>—</span></small>
+          <small data-conn-panel="disconnected" hidden data-i18n="disconnected">未连接</small>
+          <small data-conn-panel="reauth" hidden><span data-i18n="needs_reauth">需要重新授权</span> · <span data-i18n="last_ok">上次成功</span> <span data-connect-lastok>—</span></small>
+        </span>
+        <span class="top-actions">
+          <button class="btn ghost" type="button" data-conn-panel="connected" data-disconnect data-i18n="disconnect">断开</button>
+          <button class="btn" type="button" data-conn-panel="disconnected" hidden data-start-connect data-i18n="connect">连接</button>
+          <button class="btn" type="button" data-conn-panel="reauth" hidden data-start-connect data-i18n="reauth">重新连接</button>
+          <a class="btn ghost" href="#keys" data-i18n="snaptrade_config">配置</a>
+        </span>
+      </div>
+    </div>
+    <div data-conn-panel="connected">
+      <h2 data-i18n="include_accounts">纳入账户</h2>
+      <div class="well" data-account-list></div>
+      <div class="toolbar" style="padding:16px 0 0">
+        <button class="btn" type="button" data-save-account data-i18n="confirm_account">确认纳入</button>
+      </div>
+    </div>
+  </div>
+  <div class="page" data-connect-view="keys" hidden>
+    <a class="crumb" href="/admin/connect" data-i18n="back">返回</a>
+    <h2 data-i18n="snaptrade">SnapTrade</h2>
+    <form class="form wide" id="keys-form">
+      <p class="lede" data-i18n="snaptrade_keys_hint">保存 SnapTrade 个人密钥（Client ID 和 Consumer Key），再连接券商。</p>
+      <label>
+        <span data-i18n="snaptrade_client_id">Client ID</span>
+        <input id="snaptrade-client" type="text" name="clientId" autocomplete="off" spellcheck="false" required />
+      </label>
+      <label>
+        <span data-i18n="snaptrade_consumer_key">Consumer Key</span>
+        <input id="snaptrade-secret" type="password" name="consumerKey" autocomplete="new-password" />
+      </label>
+      <button class="btn" type="submit" data-i18n="save">保存</button>
+      <p class="note" data-keys-saved hidden data-i18n="profile_saved">已保存。</p>
+      <p class="note error" data-keys-error hidden></p>
+    </form>
+  </div>
+</Base>
+
+<script>
+  import { disconnectBroker, paintConnect, saveAccount, saveKeys, showConnectView, startConnect } from "../../lib/book";
+
+  void paintConnect();
+  window.addEventListener("hashchange", () => showConnectView());
+  document.getElementById("keys-form")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void saveKeys();
+  });
+  document.querySelectorAll("[data-start-connect]").forEach((btn) => {
+    btn.addEventListener("click", () => void startConnect());
+  });
+  document.querySelector("[data-disconnect]")?.addEventListener("click", () => void disconnectBroker());
+  document.querySelector("[data-save-account]")?.addEventListener("click", () => void saveAccount());
+</script>

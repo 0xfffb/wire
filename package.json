@@ -1,0 +1,27 @@
+{
+  "name": "wire",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "web"
+  ],
+  "scripts": {
+    "setup": "node scripts/setup.mjs && wrangler d1 migrations apply DB --local",
+    "dev": "wrangler dev",
+    "dev:web": "npm run dev -w @wire/web",
+    "build:web": "npm run build -w @wire/web",
+    "deploy": "npm run build:web && wrangler deploy && wrangler d1 migrations apply DB --remote",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "wrangler types"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261019.1",
+    "typescript": "^5.9.0",
+    "wrangler": "^4.151.2"
+  },
+  "dependencies": {
+    "hono": "^4.13.13",
+    "zod": "^4.6.7"
+  }
+}

@@ -1,0 +1,14 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+<Base title="同步 · Wire" heading="同步" headingKey="nav_sync" titleKey="title_sync" shell="admin" active="sync">
+  <div class="page">
+    <div class="well" data-admin-sync></div>
+  </div>
+</Base>
+
+<script>
+  import { paintAdminTables } from "../../lib/book";
+
+  void paintAdminTables();
+</script>

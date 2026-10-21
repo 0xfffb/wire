@@ -1,0 +1,12 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+<Base title="概览 · Wire" heading="概览" headingKey="nav_overview" titleKey="title_overview" shell="admin" active="overview">
+  <div class="page" data-overview></div>
+</Base>
+
+<script>
+  import { paintOverview } from "../../lib/book";
+
+  void paintOverview(document.querySelector("[data-overview]"));
+</script>

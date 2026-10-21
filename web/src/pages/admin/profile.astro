@@ -1,0 +1,80 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+<Base title="资料 · Wire" heading="资料" headingKey="nav_profile" titleKey="title_profile" shell="admin" active="profile">
+  <div class="page">
+    <form class="form wide" id="profile-form">
+      <label>
+        <span data-i18n="display_name">显示名</span>
+        <input id="profile-name" type="text" name="name" maxlength="24" autocomplete="nickname" />
+      </label>
+      <label>
+        <span data-i18n="bio_label">简介</span>
+        <textarea id="profile-bio" rows="3"></textarea>
+      </label>
+      <h2 data-i18n="socials">社媒</h2>
+      <label>
+        <span class="field-icon">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M9.54 6.78 14.7 1h-1.22L9.02 6.02 5.9 1H1.5l5.41 7.87L1.5 15h1.22l4.73-5.5L10.1 15h4.4L9.54 6.78Zm-1.67 1.95-.55-.78L3.38 1.91h1.87l3.52 5.03.55.78 4.58 6.55h-1.87L7.87 8.73Z"/></svg>
+          <span data-i18n="social_x">X</span>
+        </span>
+        <input id="profile-x" type="url" placeholder="https://x.com/…" />
+      </label>
+      <label>
+        <span class="field-icon">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="5.25" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M2.75 8h10.5M8 2.75c1.7 1.8 2.55 3.55 2.55 5.25S9.7 11.45 8 13.25C6.3 11.45 5.45 9.7 5.45 8S6.3 4.55 8 2.75Z" fill="none" stroke="currentColor" stroke-width="1.25"/></svg>
+          <span data-i18n="social_web">网站</span>
+        </span>
+        <input id="profile-site" type="url" placeholder="https://" />
+      </label>
+      <label>
+        <span class="field-icon">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="1.75" y="3.5" width="12.5" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M6.75 6.2v3.6L10.1 8 6.75 6.2Z" fill="currentColor"/></svg>
+          <span data-i18n="social_yt">YouTube</span>
+        </span>
+        <input id="profile-yt" type="url" placeholder="https://youtube.com/…" />
+      </label>
+      <button class="btn" type="submit" data-i18n="save">保存</button>
+      <p class="note" id="profile-saved" hidden data-i18n="profile_saved">已保存。</p>
+    </form>
+  </div>
+</Base>
+
+<script>
+  import { apiGet, apiSend, type Me } from "../../lib/api";
+  import { applyLocale, readLocale } from "../../lib/i18n";
+  import { applyUser } from "../../lib/profile";
+
+  const name = document.getElementById("profile-name") as HTMLInputElement | null;
+  const bio = document.getElementById("profile-bio") as HTMLTextAreaElement | null;
+  const x = document.getElementById("profile-x") as HTMLInputElement | null;
+  const site = document.getElementById("profile-site") as HTMLInputElement | null;
+  const yt = document.getElementById("profile-yt") as HTMLInputElement | null;
+  const saved = document.getElementById("profile-saved");
+
+  void apiGet<Me>("/api/admin/profile").then((user) => {
+    applyUser(user);
+    if (name) name.value = user.name;
+    if (bio) bio.value = user.bio;
+    if (x) x.value = user.x ?? "";
+    if (site) site.value = user.site ?? "";
+    if (yt) yt.value = user.youtube ?? "";
+  });
+
+  document.getElementById("profile-form")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void apiSend<Me>("/api/admin/profile", "PATCH", {
+      name: name?.value.trim() || undefined,
+      bio: bio?.value ?? "",
+      x: x?.value.trim() || null,
+      site: site?.value.trim() || null,
+      youtube: yt?.value.trim() || null,
+    }).then((user) => {
+      applyUser(user);
+      if (saved) {
+        saved.hidden = false;
+        applyLocale(readLocale());
+      }
+    });
+  });
+</script>
