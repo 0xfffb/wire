@@ -2,8 +2,9 @@ import { Hono, type Context } from "hono";
 import { getCookie } from "hono/cookie";
 
 import type { Deps } from "../deps";
-import { cachePublic, loadSession, noStore, SESSION_COOKIE } from "../middleware";
+import { cachePublic, clearSession, loadSession, noStore, SESSION_COOKIE } from "../middleware";
 import { Book } from "../services/book";
+import { Users } from "../services/users";
 import { registerAdminRoutes } from "./admin";
 import { registerAuthRoutes } from "./auth";
 import { registerOauthRoutes } from "./oauth";
@@ -45,7 +46,12 @@ class ApiRouter {
 function registerPageRoutes(app: Hono<AppEnv>) {
   const pages = async (context: Context<AppEnv>) => {
     const path = new URL(context.req.url).pathname;
-    const session = await loadSession(context.get("deps").kv, getCookie(context, SESSION_COOKIE));
+    const deps = context.get("deps");
+    let session = await loadSession(deps.kv, getCookie(context, SESSION_COOKIE));
+    if (session && !(await new Users(deps.database).getById(session.userId))) {
+      await clearSession(context, deps.kv);
+      session = null;
+    }
     if (path.startsWith("/login") && session) return context.redirect("/admin");
     if (path.startsWith("/admin") && !session) return context.redirect("/login");
     if (!context.env.ASSETS) return context.body(null, 404);
@@ -54,6 +60,7 @@ function registerPageRoutes(app: Hono<AppEnv>) {
   app.get("/login", pages);
   app.get("/login/", pages);
   app.get("/admin", pages);
+  app.get("/admin/", pages);
   app.get("/admin/*", pages);
 }
 

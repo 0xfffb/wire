@@ -41,7 +41,7 @@ import Base from "../layouts/Base.astro";
 </Base>
 
 <script>
-  import { ApiError, apiGet, apiSend, getMe, type Me } from "../lib/api";
+  import { ApiError, apiGet, apiSend, type Me } from "../lib/api";
   import { applyUser } from "../lib/profile";
   import { applyLocale, readLocale, t, type MessageKey } from "../lib/i18n";
 
@@ -84,10 +84,6 @@ import Base from "../layouts/Base.astro";
   void apiGet<{ admin: boolean }>("/api/setup")
     .then((data) => show(data.admin ? "login" : "setup"))
     .catch(() => show("setup"));
-
-  void getMe()
-    .then((user) => goAdmin(user))
-    .catch(() => undefined);
 
   setupForm?.addEventListener("submit", (event) => {
     event.preventDefault();
