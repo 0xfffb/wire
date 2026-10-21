@@ -4,6 +4,21 @@
 
 Self-hosted holdings page on Cloudflare Workers (D1, KV). One instance, one book. Public site at `/`; admin at `/admin`. Brokerage data via SnapTrade personal API keys.
 
+## Features
+
+- Public holdings page and an admin console (connect, holdings, orders, sync log, sharing, profile)
+- One admin, created on first visit; one included brokerage account
+- Daily snapshot at `0 8 * * *` UTC; the public page keeps the last successful sync
+- Share switches: list the book, show size, show recent orders (size is omitted from the API when off)
+- Per-currency weights including cash; current return and per-position P&L; no FX conversion
+- Chinese / English, light / dark / system
+
+## Brokerages
+
+Connections go through [SnapTrade Personal](https://snaptrade.com/personal). Wire does not talk to brokers directly. You authorize in SnapTrade’s portal, then include one account.
+
+SnapTrade covers 40+ firms, including Schwab, Fidelity, Robinhood, Interactive Brokers, E*TRADE, Vanguard, Webull, moomoo, Wealthsimple, Questrade, Coinbase, and Kraken. See the [full list](https://snaptrade.com/brokerage-integrations).
+
 ## Requirements
 
 - Node.js 20+
