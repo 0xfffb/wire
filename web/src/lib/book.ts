@@ -55,7 +55,7 @@ export function holdingsTableHtml(rows: HoldingRow[], hideSize: boolean) {
   return `<table class="holdings"><thead><tr><th>${i18n("holdings")}</th><th>${i18n("currency")}</th><th class="num">${i18n("price")}</th><th class="num">${i18n("qty")}</th><th class="num">${i18n("value")}</th><th class="num">${i18n("cost")}</th><th class="num">${i18n("pnl")}</th><th class="num">${i18n("weight")}</th></tr></thead><tbody>${rows
     .map(
       (row) =>
-        `<tr><td><strong>${row.code}</strong> ${row.name}</td><td>${ccyPill(row.ccy)}</td><td class="num">${row.price}</td><td class="num">${num(row.qty, hideSize)}</td><td class="num">${num(row.value, hideSize)}</td><td class="num">${num(row.cost, hideSize)}</td><td class="num ${pnlTone(row.pnlPct ?? row.pnl)}"><span class="pnl">${num(row.pnl, hideSize)}<span class="pnl-pct">${row.pnlPct ?? "—"}</span></span></td><td class="num">${num(row.weight, hideSize)}</td></tr>`,
+        `<tr><td><strong>${row.code}</strong> ${row.name}</td><td>${ccyPill(row.ccy)}</td><td class="num">${row.price}</td><td class="num">${num(row.qty, hideSize)}</td><td class="num">${num(row.value, hideSize)}</td><td class="num">${num(row.cost, hideSize)}</td><td class="num ${hideSize ? "" : pnlTone(row.pnlPct ?? row.pnl)}"><span class="pnl">${hideSize ? gated() : `${row.pnl}<span class="pnl-pct">${row.pnlPct ?? "—"}</span>`}</span></td><td class="num">${num(row.weight, hideSize)}</td></tr>`,
     )
     .join("")}</tbody></table>`;
 }

@@ -18,7 +18,7 @@
 | 同步 | 只有 Cron，没有手动同步接口，没有 Queue |
 | 缓存 | `GET /api/book`、`/api/setup`、`/api/health` 用 Workers Cache API，短 TTL。改资料、分享、断开或同步成功后清掉。操作台与登录接口 `private, no-store` |
 
-公开页「显示数量」关着时，**接口也不返回**数量 / 市值 / 成本 / 盈亏金额 / 占比 / 订单数量与金额，不能只靠前端模糊。现金余额、现金占比、股价、当前收益、单行盈亏百分比始终返回。
+公开页「显示数量」关着时，**接口也不返回**数量 / 市值 / 成本 / 盈亏金额 / 盈亏百分比 / 占比 / 订单数量与金额，不能只靠前端模糊。现金余额、现金占比、股价、当前收益始终返回。
 
 ## 页面 ↔ 接口
 
@@ -135,7 +135,7 @@ SnapTrade 授权回来走 `GET /oauth/snaptrade/callback`（重定向，不是 J
 规则：
 
 - `paper`：纳入账户为模拟盘（SnapTrade `is_paper` 或券商品 `SANDBOX`）时 `true`，公开页用黄标签；否则实盘绿。
-- `showQty: false` 时，`holdings[]` 不包含 `qty` / `value` / `cost` / `pnl` / `weight`；`orders[]` 不包含 `qty` / `amount`。`pnlPct` 仍返回。现金行仍带 `balance`、`weight`。
+- `showQty: false` 时，`holdings[]` 不包含 `qty` / `value` / `cost` / `pnl` / `pnlPct` / `weight`；`orders[]` 不包含 `qty` / `amount`。现金行仍带 `balance`、`weight`。
 - `showFills: false` 时不返回 `orders`。
 - `cash` 只列余额 > 0 的货币。
 - `ytd` 是当前收益：各币种（市值 − 成本）/ 成本，不含现金、不换汇。一种货币只写 `+4.04%`；多种则 `USD +4.04% · HKD +2.10%`。没有持仓或成本为 0 则 `null`。

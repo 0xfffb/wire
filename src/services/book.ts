@@ -73,7 +73,7 @@ function withWeights(cash: CashRow[], holdings: PositionRow[]) {
 
 function hideSize(holdings: HoldingView[], orders: OrderView[]) {
   return {
-    holdings: holdings.map(({ qty: _qty, value: _value, cost: _cost, pnl: _pnl, weight: _weight, ...rest }) => rest),
+    holdings: holdings.map(({ qty: _qty, value: _value, cost: _cost, pnl: _pnl, pnlPct: _pnlPct, weight: _weight, ...rest }) => rest),
     orders: orders.map(({ qty: _qty, amount: _amount, ...rest }) => rest),
   };
 }

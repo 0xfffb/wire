@@ -503,7 +503,7 @@ import "../styles/global.css";
         const qty = (value: string) => (hideSize ? gated(value) : value);
         return `<table class="holdings"><thead><tr><th>持仓</th><th>货币</th><th class="num">股价</th><th class="num">数量</th><th class="num">市值</th><th class="num">成本</th><th class="num">盈亏</th><th class="num">占比</th></tr></thead><tbody>${rows
           .map(
-            (row) => `<tr><td><strong>${row.code}</strong> ${row.name}</td><td>${ccyPill(row.ccy)}</td><td class="num">${row.price}</td><td class="num">${qty(row.qty)}</td><td class="num">${qty(row.value)}</td><td class="num">${qty(row.cost)}</td><td class="num"><span class="pnl">${qty(row.pnl)}<span class="pnl-pct">${row.pnlPct}</span></span></td><td class="num">${qty(row.weight)}</td></tr>`,
+            (row) => `<tr><td><strong>${row.code}</strong> ${row.name}</td><td>${ccyPill(row.ccy)}</td><td class="num">${row.price}</td><td class="num">${qty(row.qty)}</td><td class="num">${qty(row.value)}</td><td class="num">${qty(row.cost)}</td><td class="num"><span class="pnl">${hideSize ? gated(row.pnl) : `${row.pnl}<span class="pnl-pct">${row.pnlPct}</span>`}</span></td><td class="num">${qty(row.weight)}</td></tr>`,
           )
           .join("")}</tbody></table>`;
       }
