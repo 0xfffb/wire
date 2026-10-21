@@ -36,7 +36,7 @@ function registerAuthRoutes(app: Hono<AppEnv>) {
     if ("error" in created) return context.json({ error: created.error }, 409);
     const token = await createSession(context.get("deps").kv, created.user.id);
     attachSessionCookie(context, token);
-    purgePublic(context.executionCtx);
+    await purgePublic();
     return context.json(created.user, 201);
   });
 

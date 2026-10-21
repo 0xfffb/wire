@@ -26,14 +26,18 @@ const cachePublic: MiddlewareHandler = async (context, next) => {
   if (hit) {
     const headers = new Headers(hit.headers);
     headers.set("X-Cache", "HIT");
+    headers.set("Cache-Control", "private, no-store");
     return new Response(hit.body, { status: hit.status, headers });
   }
 
   await next();
   if (context.res.status !== 200) return;
-  context.header("Cache-Control", `public, max-age=${ttl}`);
+  const cached = context.res.clone();
+  const stored = new Headers(cached.headers);
+  stored.set("Cache-Control", `public, max-age=${ttl}`);
+  context.header("Cache-Control", "private, no-store");
   context.header("X-Cache", "MISS");
-  context.executionCtx.waitUntil(caches.default.put(key, context.res.clone()));
+  context.executionCtx.waitUntil(caches.default.put(key, new Response(cached.body, { status: cached.status, headers: stored })));
 };
 
 const noStore: MiddlewareHandler = async (context, next) => {
@@ -45,10 +49,8 @@ async function purgeApiCache(...paths: string[]) {
   await Promise.all(paths.map((path) => caches.default.delete(cacheKey(path))));
 }
 
-function purgePublic(ctx?: { waitUntil(promise: Promise<unknown>): void }) {
-  const work = purgeApiCache("/api/book", "/api/setup");
-  if (ctx) ctx.waitUntil(work);
-  else return work;
+function purgePublic() {
+  return purgeApiCache("/api/book", "/api/setup");
 }
 
 export { cachePublic, noStore, purgeApiCache, purgePublic };

@@ -62,7 +62,9 @@ export function hasAdmin() {
 export function applyProfile(draft?: ProfileDraft) {
   if (draft) writeProfile(draft);
   const profile = draft ?? readProfile();
-  const letter = [...profile.name][0] ?? "W";
+  if (!draft && !profile.name && !profile.bio) return;
+  const letter = [...profile.name][0] ?? "";
+  document.documentElement.setAttribute("data-me-ready", "");
 
   for (const el of document.querySelectorAll<HTMLElement>("[data-me-name]")) {
     el.textContent = profile.name;

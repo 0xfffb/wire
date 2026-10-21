@@ -202,7 +202,7 @@ a { color: inherit; }
   min-width: 0;
   line-height: 1.25;
 }
-.side-account b { font-weight: 510; }
+.side-account b { font-weight: 510; min-height: 1em; }
 .side-account span span {
   color: var(--faint);
   font-size: 12px;
@@ -473,6 +473,12 @@ html[data-theme="light"] .pref-select {
   align-items: center;
   gap: 10px;
   min-width: 0;
+}
+
+html:not([data-me-ready]) [data-me-name],
+html:not([data-me-ready]) [data-me-avatar],
+html:not([data-me-ready]) [data-me-bio] {
+  visibility: hidden;
 }
 
 .avatar {

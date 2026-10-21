@@ -69,7 +69,7 @@ function registerAdminRoutes(app: Hono<AppEnv>) {
 
   app.delete("/api/admin/connect", requireAuth, async (context) => {
     const view = await Connect.from(context.get("deps")).disconnect(context.get("userId") ?? "");
-    purgePublic(context.executionCtx);
+    await purgePublic();
     return context.json(view);
   });
 
@@ -98,7 +98,7 @@ function registerAdminRoutes(app: Hono<AppEnv>) {
     const users = new Users(context.get("deps").database);
     const share = await users.setShare(context.get("userId") ?? "", parsed.data);
     if (!share) return context.json({ error: "unauthorized" }, 401);
-    purgePublic(context.executionCtx);
+    await purgePublic();
     return context.json(share);
   });
 
@@ -115,7 +115,7 @@ function registerAdminRoutes(app: Hono<AppEnv>) {
     const users = new Users(context.get("deps").database);
     const user = await users.updateProfile(context.get("userId") ?? "", parsed.data);
     if (!user) return context.json({ error: "unauthorized" }, 401);
-    purgePublic(context.executionCtx);
+    await purgePublic();
     return context.json(user);
   });
 }

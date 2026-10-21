@@ -84,9 +84,9 @@ const {
               {shell === "admin" ? (
                 <div class="side-account-row">
                   <a class:list={["side-account", active === "profile" && "is-active"]} href="/admin/profile">
-                    <span class="avatar" data-me-avatar>木</span>
+                    <span class="avatar" data-me-avatar></span>
                     <span>
-                      <b data-me-name>木兰</b>
+                      <b data-me-name></b>
                       <span data-i18n="role_admin">管理员</span>
                     </span>
                   </a>
@@ -115,6 +115,34 @@ const {
         </div>
       </div>
     )}
+    <script is:inline>
+      (function () {
+        try {
+          var raw = localStorage.getItem("wire.profile");
+          if (!raw) return;
+          var p = JSON.parse(raw);
+          var name = p && p.name ? String(p.name).trim() : "";
+          if (!name) return;
+          var bio = p && p.bio ? String(p.bio) : "";
+          var avatar = p && p.avatar ? String(p.avatar) : "";
+          var letter = Array.from(name)[0] || "";
+          document.querySelectorAll("[data-me-name]").forEach(function (el) { el.textContent = name; });
+          document.querySelectorAll("[data-me-bio]").forEach(function (el) { el.textContent = bio; });
+          document.querySelectorAll("[data-me-avatar]").forEach(function (el) {
+            if (avatar) {
+              el.textContent = "";
+              var img = document.createElement("img");
+              img.alt = "";
+              img.src = avatar;
+              el.appendChild(img);
+            } else {
+              el.textContent = letter;
+            }
+          });
+          document.documentElement.setAttribute("data-me-ready", "");
+        } catch (e) {}
+      })();
+    </script>
     <script>
       import { bootUi } from "../lib/i18n";
       import { ApiError, apiSend, forgetMe, getMe } from "../lib/api";
